@@ -1,0 +1,2 @@
+# Three.js 为未修改的上游分发文件；不以本项目的源码空白规则检查其内部格式。
+frontend/vendor/** -whitespace
