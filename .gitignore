@@ -1,0 +1,12 @@
+# 项目依赖由 package-lock.json 锁定；浏览器所需的 Three.js 副本位于 frontend/vendor/。
+node_modules/
+
+# Python 运行期缓存和测试缓存。
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 未来 ORFS 任务、日志和导出结果必须保留在独立工作区，不进入 Git。
+runtime/
+artifacts/
+*.log

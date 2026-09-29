@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "1.0",
+  "cases": [
+    {
+      "id": "sky130-teaching-cells",
+      "title": "标准单元行：INV 与 NAND2",
+      "sourceKind": "teaching",
+      "sourceLabel": "教学编排场景 · 非 ORFS 结果",
+      "availability": "ready",
+      "pdk": "SKY130（教学映射待资产核验）",
+      "stage": "局部标准单元行",
+      "description": "用少量标准单元、物理单元、电源轨和信号网络解释后端对象之间的关系。位置与三维高度是教学场景参数，不代表一次真实工具运行。",
+      "entities": [
+        {
+          "id": "inst-u-inv0",
+          "type": "instance",
+          "name": "u_inv0",
+          "master": "INV_X1",
+          "role": "逻辑标准单元",
+          "net": "n_data0",
+          "layer": "M1",
+          "x": 42,
+          "y": 42,
+          "width": 76,
+          "height": 42,
+          "color": "#4a92ff",
+          "explanation": "反相器实例。二维矩形表示后端抽象边界；单元内部扩散区、栅和接触将在后续经库资产核验后映射。"
+        },
+        {
+          "id": "inst-u-nand0",
+          "type": "instance",
+          "name": "u_nand0",
+          "master": "NAND2_X1",
+          "role": "逻辑标准单元",
+          "net": "n_data1",
+          "layer": "M1",
+          "x": 138,
+          "y": 42,
+          "width": 88,
+          "height": 42,
+          "color": "#8b6bff",
+          "explanation": "二输入 NAND 实例。它与 INV_X1 共享标准单元行，但具有不同逻辑功能、端口和内部晶体管网络。"
+        },
+        {
+          "id": "inst-u-tap0",
+          "type": "physicalCell",
+          "name": "u_tap0",
+          "master": "TAPCELL",
+          "role": "阱/衬底接触教学单元",
+          "net": "VPWR/VGND",
+          "layer": "M1",
+          "x": 12,
+          "y": 42,
+          "width": 20,
+          "height": 42,
+          "color": "#e79f3c",
+          "explanation": "Tap 用于说明阱或衬底接触与电源轨的关系。这里是教学位置，不代表选定库中该单元的真实尺寸或插入结果。"
+        },
+        {
+          "id": "net-vpwr",
+          "type": "net",
+          "name": "VPWR",
+          "master": "电源轨",
+          "role": "电源网络",
+          "net": "VPWR",
+          "layer": "M1",
+          "x": 8,
+          "y": 18,
+          "width": 244,
+          "height": 8,
+          "color": "#f05b67",
+          "explanation": "电源轨的教学表示。实际电源网络、层名和连通性必须以 LEF、DEF/ODB 及提取数据为依据。"
+        },
+        {
+          "id": "net-vgnd",
+          "type": "net",
+          "name": "VGND",
+          "master": "地轨",
+          "role": "电源网络",
+          "net": "VGND",
+          "layer": "M1",
+          "x": 8,
+          "y": 102,
+          "width": 244,
+          "height": 8,
+          "color": "#536179",
+          "explanation": "地轨的教学表示。它用于说明标准单元行中电源连接和镜像方向的约束。"
+        },
+        {
+          "id": "route-n-data0",
+          "type": "route",
+          "name": "n_data0",
+          "master": "信号走线",
+          "role": "局部互连",
+          "net": "n_data0",
+          "layer": "M2",
+          "x": 96,
+          "y": 84,
+          "width": 92,
+          "height": 6,
+          "color": "#45d0ad",
+          "explanation": "M2 教学走线。它跨越单元上方；是否连接取决于端点、通孔和数据库连通关系，不能仅看二维重叠。"
+        },
+        {
+          "id": "via-n-data0",
+          "type": "via",
+          "name": "VIA1_n_data0",
+          "master": "VIA1",
+          "role": "层间连接",
+          "net": "n_data0",
+          "layer": "VIA1",
+          "x": 106,
+          "y": 70,
+          "width": 10,
+          "height": 10,
+          "color": "#f4dc70",
+          "explanation": "VIA1 教学对象，表示 M1 与 M2 间的层对关系。后续接入真实案例时将从版图数据库读取。"
+        }
+      ]
+    },
+    {
+      "id": "sky130-orfs-datapath",
+      "title": "小型寄存器数据通路",
+      "sourceKind": "orfs",
+      "sourceLabel": "ORFS 真实案例 · 尚待 Linux 环境核验",
+      "availability": "pending",
+      "pdk": "待核验",
+      "stage": "未接入",
+      "description": "该案例将承载输入寄存器、组合逻辑、输出寄存器及参数实验。目前尚未读取 ORFS 产物，因此不展示或伪造真实版图、报告和流程快照。",
+      "entities": []
+    }
+  ]
+}

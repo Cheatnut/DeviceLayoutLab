@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>DeviceLayoutLab</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">DEVICE · LAYOUT · CIRCUIT</p>
+          <h1>DeviceLayoutLab</h1>
+        </div>
+        <div class="case-picker">
+          <label for="case-select">预设案例</label>
+          <select id="case-select" aria-label="选择预设案例"></select>
+          <span id="source-badge" class="source-badge"></span>
+        </div>
+      </header>
+
+      <section class="context-bar" aria-label="案例状态">
+        <span id="case-title">正在加载案例…</span>
+        <span id="case-status" class="status"></span>
+        <span id="case-pdk"></span>
+        <span id="case-stage"></span>
+      </section>
+
+      <section class="workspace">
+        <aside class="sidebar panel">
+          <div class="panel-heading"><h2>对象与图层</h2></div>
+          <div id="object-list" class="object-list" aria-label="对象列表"></div>
+          <div class="layer-controls">
+            <p>显示图层</p>
+            <label><input type="checkbox" data-layer="M1" checked /> M1 · 单元与电源轨</label>
+            <label><input type="checkbox" data-layer="M2" checked /> M2 · 信号走线</label>
+            <label><input type="checkbox" data-layer="VIA1" checked /> VIA1 · 层间连接</label>
+          </div>
+        </aside>
+
+        <section class="view-grid" aria-label="二维和三维联动工作台">
+          <article class="view-panel panel" id="layout-panel">
+            <div class="panel-heading">
+              <h2>二维版图</h2>
+              <span>原始平面几何</span>
+            </div>
+            <svg id="layout-view" viewBox="0 0 270 132" role="img" aria-label="二维标准单元行版图"></svg>
+          </article>
+
+          <article class="view-panel panel" id="model-panel">
+            <div class="panel-heading">
+              <h2>三维教学结构</h2>
+              <span id="model-scale">教学展开 × 1.0</span>
+            </div>
+            <div id="model-view" class="model-view" aria-label="Three.js 三维教学模型"></div>
+            <label class="explode-control" for="explode-range">
+              拆解显示
+              <input id="explode-range" type="range" min="0" max="100" value="0" />
+            </label>
+          </article>
+        </section>
+
+        <aside class="inspector panel">
+          <div class="panel-heading"><h2>对象说明</h2></div>
+          <div id="inspector-content" class="inspector-content">
+            <p>选择二维或三维对象，查看其来源、角色和教学边界。</p>
+          </div>
+          <div class="run-card">
+            <h3>真实流程实验</h3>
+            <p>本切片仅保留受约束运行入口；ORFS 尚未接入。</p>
+            <button id="run-button" type="button">提交运行</button>
+            <p id="run-message" class="run-message" aria-live="polite"></p>
+          </div>
+        </aside>
+      </section>
+
+      <footer class="evidence-note">
+        <span>教学场景、工艺重建和 ORFS 结果分别标注来源。</span>
+        <span>三维拆解只改变显示，不改变电气拓扑或真实几何。</span>
+      </footer>
+    </main>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
