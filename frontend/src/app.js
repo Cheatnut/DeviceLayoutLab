@@ -1,4 +1,5 @@
 import { TeachingScene } from "./scene.js";
+import { initializeLibrary } from "./library.js";
 
 const elements = {
   select: document.querySelector("#case-select"),
@@ -188,3 +189,4 @@ function safeParse(text) {
 }
 
 boot();
+initializeLibrary(requestJson);

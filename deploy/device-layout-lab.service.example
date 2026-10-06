@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=REPLACE_WITH_SERVICE_USER
-WorkingDirectory=REPLACE_WITH_PROJECT_DIRECTORY
-ExecStart=REPLACE_WITH_PYTHON_EXECUTABLE backend/app.py --host 127.0.0.1 --port REPLACE_WITH_PORT
+User={{service_user}}
+WorkingDirectory={{project_root}}
+ExecStart={{python_executable}} {{app_script}} --config {{config_file}}
 Restart=on-failure
 RestartSec=3
 

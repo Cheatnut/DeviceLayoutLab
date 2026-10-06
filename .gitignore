@@ -10,3 +10,6 @@ __pycache__/
 runtime/
 artifacts/
 *.log
+
+# 部署实例仅在本机维护，一次启动只读取显式 --config 指定的一份。
+config/*.local.json

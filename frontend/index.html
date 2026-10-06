@@ -76,6 +76,19 @@
         </aside>
       </section>
 
+      <details class="library-panel panel">
+        <summary>工艺库 · 查看真实 LEF / Liberty 单元资料</summary>
+        <div class="library-workspace">
+          <div>
+            <label for="library-pdk">已登记工艺</label>
+            <select id="library-pdk" aria-label="选择工艺库"></select>
+            <p id="library-status" aria-live="polite">正在检查工艺库…</p>
+            <div id="library-cells"></div>
+          </div>
+          <div id="library-detail" aria-live="polite"></div>
+        </div>
+      </details>
+
       <footer class="evidence-note">
         <span>教学场景、工艺重建和 ORFS 结果分别标注来源。</span>
         <span>三维拆解只改变显示，不改变电气拓扑或真实几何。</span>

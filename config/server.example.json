@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "paths": {
+    "project_root": "..",
+    "frontend_root": "${paths.project_root}/frontend",
+    "case_catalog": "${paths.project_root}/backend/data/cases.json",
+    "runtime_root": "${paths.project_root}/runtime",
+    "jobs_root": "${paths.runtime_root}/jobs",
+    "reports_root": "${paths.runtime_root}/reports",
+    "logs_root": "${paths.runtime_root}/logs",
+    "exports_root": "${paths.runtime_root}/exports",
+    "environment_report": "${paths.reports_root}/environment.json",
+    "library_index": "${paths.reports_root}/library.json",
+    "service_unit": "${paths.exports_root}/device-layout-lab.service",
+    "orfs_root": "${paths.project_root}/../OpenROAD-flow-scripts",
+    "flow_home": "${paths.orfs_root}/flow",
+    "platforms_root": "${paths.flow_home}/platforms",
+    "pdk_root": "${paths.platforms_root}",
+    "service_template": "${paths.project_root}/deploy/device-layout-lab.service.example"
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080
+  },
+  "tools": {
+    "python": { "executable": "python3", "version_args": ["--version"] },
+    "make": { "executable": "make", "version_args": ["--version"] },
+    "openroad": {
+      "executable": "${paths.orfs_root}/tools/install/OpenROAD/bin/openroad",
+      "version_args": ["-version"]
+    },
+    "yosys": {
+      "executable": "${paths.orfs_root}/tools/install/yosys/bin/yosys",
+      "version_args": ["-V"]
+    },
+    "klayout": { "executable": "klayout", "version_args": ["-v"] },
+    "blender": { "executable": "", "version_args": ["--version"] }
+  },
+  "environment": {
+    "variables": { "QT_QPA_PLATFORM": "offscreen" },
+    "executable_paths": [],
+    "library_paths": []
+  },
+  "orfs": {
+    "makefile": "${paths.flow_home}/Makefile",
+    "scripts_dir": "${paths.flow_home}/scripts",
+    "utils_dir": "${paths.flow_home}/util",
+    "probe_timeout_seconds": 15,
+    "worker_count": 1,
+    "threads_per_run": 2,
+    "job_timeout_seconds": 3600
+  },
+  "deployment": {
+    "service_user": "",
+    "app_script": "${paths.project_root}/backend/app.py"
+  },
+  "pdks": {
+    "sky130hd": {
+      "title": "SKY130 HD",
+      "device_family": "planar",
+      "platform_name": "sky130hd",
+      "root": "${paths.pdk_root}/sky130hd",
+      "platform_config": "${pdks.sky130hd.root}/config.mk",
+      "tech_lef": "${pdks.sky130hd.root}/lef/sky130_fd_sc_hd.tlef",
+      "cell_lef": "${pdks.sky130hd.root}/lef/sky130_fd_sc_hd_merged.lef",
+      "liberty": ["${pdks.sky130hd.root}/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"],
+      "gds": ["${pdks.sky130hd.root}/gds/sky130_fd_sc_hd.gds"],
+      "cdl": ["${pdks.sky130hd.root}/cdl/sky130hd.cdl"],
+      "klayout_tech": "${pdks.sky130hd.root}/sky130hd.lyt",
+      "layer_properties": "${pdks.sky130hd.root}/sky130hd.lyp",
+      "tapcell_script": "${pdks.sky130hd.root}/tapcell.tcl",
+      "cells": [
+        { "name": "sky130_fd_sc_hd__inv_1", "role": "反相器", "evidence": "Liberty 输出引脚 function，接入时核验" },
+        { "name": "sky130_fd_sc_hd__nand2_1", "role": "二输入 NAND", "evidence": "Liberty 输出引脚 function，接入时核验" },
+        { "name": "sky130_fd_sc_hd__tapvpwrvgnd_1", "role": "Tap", "evidence": "ORFS 平台 config.mk 中的 TAP_CELL_NAME" },
+        { "name": "sky130_fd_sc_hd__fill_1", "role": "Filler", "evidence": "ORFS 平台 config.mk 中的 FILL_CELLS" },
+        { "name": "sky130_fd_sc_hd__conb_1", "role": "Tie high / low", "evidence": "ORFS 平台 config.mk 中的 TIEHI_CELL_AND_PORT / TIELO_CELL_AND_PORT" },
+        { "name": "sky130_fd_sc_hd__diode_2", "role": "天线二极管", "evidence": "单元 LEF 的 CLASS CORE ANTENNACELL 与 DIODE 引脚 ANTENNADIFFAREA" }
+      ]
+    }
+  }
+}

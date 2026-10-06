@@ -65,4 +65,16 @@ select { min-width: 230px; border: 1px solid #3a517d; border-radius: 6px; backgr
 .run-message { min-height: 1.3em; margin: 8px 0 0; color: #ffd888; }
 .evidence-note { display: flex; justify-content: space-between; gap: 20px; padding-block: 10px; border-top: 1px solid #293956; color: #7e94b9; font-size: .71rem; }
 
+.library-panel { margin: 0 22px 14px; }
+.library-panel summary { padding: 12px; cursor: pointer; font-size: .88rem; color: #c5d9ff; }
+.library-workspace { display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; gap: 22px; padding: 14px; border-top: 1px solid #273858; }
+.library-workspace label, #library-status { font-size: .8rem; color: #b9c7e2; }
+.library-workspace select { display: block; width: 100%; margin: 8px 0; }
+#library-detail { font-size: .84rem; line-height: 1.5; color: #b9c7e2; }
+#library-detail h3 { color: #eaf0ff; }
+.library-pin-view { display: block; background: #0c1629; width: 100%; height: 240px; border: 1px solid #273858; border-radius: 6px; margin-block: 12px; }
+.library-pin-table { width: 100%; border-collapse: collapse; margin-block: 12px; }
+.library-pin-table td, .library-pin-table th { border-bottom: 1px solid #273858; padding: 6px; text-align: left; }
+.library-layer-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 10px; }
+
 @media (max-width: 1250px) { .workspace { grid-template-columns: 205px minmax(560px, 1fr) 240px; } .view-grid { grid-template-columns: 1fr; } .view-panel { min-height: 330px; } #layout-view { min-height: 250px; } }

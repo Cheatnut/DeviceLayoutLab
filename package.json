@@ -4,9 +4,9 @@
   "private": true,
   "description": "面向数字后端物理实现教学的器件—版图—电路工作台",
   "scripts": {
-    "start": "python backend/app.py",
+    "start": "python -m backend.app",
     "test": "python -m unittest discover -s tests -v",
-    "check": "node --check frontend/src/app.js && node --check frontend/src/scene.js"
+    "check": "node --check frontend/src/app.js && node --check frontend/src/scene.js && node --check frontend/src/library.js"
   },
   "dependencies": {
     "three": "^0.186.1"
