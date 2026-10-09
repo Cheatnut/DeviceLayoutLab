@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 
 from backend import app as APP
 from backend.configuration import load_configuration
-from helpers import write_test_configuration
+from helpers import temporary_directory, test_environment
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -18,9 +18,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 class CaseCatalogTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = temporary_directory()
         self.addCleanup(self.directory.cleanup)
-        self.config = load_configuration(write_test_configuration(Path(self.directory.name)))
+        self.config = load_configuration(test_environment(Path(self.directory.name)))
 
     def test_catalog_has_unique_stable_ids(self) -> None:
         catalog = APP.load_case_catalog(self.config)
@@ -44,8 +44,8 @@ class HttpContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         """在随机本地端口启动服务，避免依赖开发者手动启动的进程。"""
-        cls.directory = tempfile.TemporaryDirectory()
-        cls.config = load_configuration(write_test_configuration(Path(cls.directory.name)))
+        cls.directory = temporary_directory()
+        cls.config = load_configuration(test_environment(Path(cls.directory.name)))
         cls.server = APP.create_server(cls.config)
         cls.base_url = f"http://127.0.0.1:{cls.server.server_port}"
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
@@ -72,7 +72,7 @@ class HttpContractTest(unittest.TestCase):
         self.assertEqual(payload["code"], "ORFS_NOT_CONNECTED")
 
     def test_static_source_and_configuration_are_not_exposed(self) -> None:
-        for resource in ("/%2e%2e/config/server.example.json", "/api/config", "/api/library/unknown/cells/unknown"):
+        for resource in ("/%2e%2e/config/server.example.sh", "/api/config", "/api/library/unknown/cells/unknown"):
             with self.assertRaises(HTTPError) as captured_error:
                 urlopen(f"{self.base_url}{resource}")
             self.assertIn(captured_error.exception.code, (400, 404))

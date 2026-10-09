@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import mimetypes
 import sys
@@ -149,14 +148,11 @@ def create_server(config: ServerConfiguration) -> ThreadingHTTPServer:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="运行 DeviceLayoutLab 教学服务")
-    parser.add_argument("--config", required=True, type=Path, help="唯一服务器配置文件")
-    arguments = parser.parse_args()
     try:
-        config = load_configuration(arguments.config)
+        config = load_configuration()
         server = create_server(config)
     except (ConfigurationError, OSError, ValueError) as error:
-        parser.exit(2, f"启动失败：{error}\n")
+        raise SystemExit(f"启动失败：{error}") from error
     print(f"DeviceLayoutLab 服务已监听 http://{config.get('server.host')}:{server.server_port}")
     try:
         server.serve_forever()

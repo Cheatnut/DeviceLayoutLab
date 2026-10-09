@@ -1,68 +1,54 @@
-# 服务器配置单一事实源
+# Linux 服务器单一配置脚本
 
-部署时复制 `server.example.json` 为 `server.local.json` 并填写。每个命令只读取 `--config` 明确指定的一份文件；示例与本地配置不会合并，没有 `.env` 覆盖、用户目录自动搜索或工具路径回退表。本地文件被 Git 忽略，后续拉取代码不会覆盖服务器路径。
-
-使用 JSON 是为了兼容当前扫描到的 Python 3.10，不要求服务器额外安装配置解析依赖。文件不支持注释，字段解释在本文。API 密钥不属于本配置。
-
-## 路径规则
-
-1. 所有相对路径以**配置文件所在目录**为基准，与命令工作目录无关。
-2. `${paths.orfs_root}` 等表达式引用配置字段。路径引用先变成绝对路径，再拼接后缀；不存在的字段、空路径和引用循环直接报错。
-3. 工具入口可以是完整路径，也可以是裸命令名。裸命令仅按服务器的 PATH 及配置中的 `environment.executable_paths` 定位；需要固定版本时填写完整路径。不要写 `source ...`、shell 表达式或多个命令。
-4. 输出目录不允许与 ORFS、PDK、原始网页/案例、配置目录重叠；路径会解析符号链接后比较。检查与索引仅在指定生成目录写入。
-5. 路径可以包含空格。JSON 中 Windows 反斜线需写为 `\\`，也可使用 `/`；Linux 使用 Linux 路径，不能直接复用 Windows 盘符。
-
-服务器项目与 ORFS 平行时，示例中的关系已经符合要求：
-
-```json
-"project_root": "..",
-"orfs_root": "${paths.project_root}/../OpenROAD-flow-scripts"
-```
-
-若 ORFS 文件夹名字或位置不同，只改 `paths.orfs_root`；`flow_home`、OpenROAD、Yosys 和默认 SKY130 资料会随引用变化。独立安装的 PDK 可以通过 `paths.pdk_root` 或 `pdks.<id>.root` 指向其它位置；各个资产文件也可分别覆盖，代码不假设所有服务器都采用 ORFS 内置库布局。
-
-## 字段说明
-
-| 字段 | 用途 |
-| --- | --- |
-| `paths.project_root` | 本项目根目录，示例为配置目录的上一级 |
-| `paths.frontend_root` / `case_catalog` | 静态网页与预设案例目录/文件 |
-| `paths.orfs_root` / `flow_home` | ORFS 根与流程目录 |
-| `paths.platforms_root` / `pdk_root` | ORFS 平台集合与默认工艺资产集合；可以不同 |
-| `paths.runtime_root` | 项目独立生成根目录，不写入共享 ORFS |
-| `paths.jobs_root` | 后续任务工作区，目前不执行设计任务 |
-| `paths.reports_root` / `logs_root` / `exports_root` | 检查记录、日志与部署/教学导出 |
-| `paths.environment_report` / `library_index` | 检查记录与真实库索引的具体输出文件 |
-| `paths.service_template` / `service_unit` | systemd 模板与生成文件 |
-| `server.host` / `port` | 服务监听地址与端口；修改此处即可，不在 unit 中复制 |
-| `tools.<name>.executable` | Python、make、OpenROAD、Yosys、KLayout、Blender 的入口 |
-| `tools.<name>.version_args` | 对应工具的只读版本查询参数数组 |
-| `environment.variables` | 对工具子进程应用的环境变量；示例让 Qt 无显示启动 |
-| `environment.executable_paths` / `library_paths` | 子进程 PATH / LD_LIBRARY_PATH 前缀目录列表 |
-| `orfs.makefile` / `scripts_dir` / `utils_dir` | 流程文件、脚本与 util 目录，供检查及后续适配 |
-| `orfs.probe_timeout_seconds` | 工具版本查询超时 |
-| `orfs.worker_count` / `threads_per_run` / `job_timeout_seconds` | 后续执行器资源参数；当前没有队列或任务执行器 |
-| `deployment.service_user` | 生成 systemd 文件前填写；当前默认留空 |
-| `deployment.app_script` | 服务入口源文件，systemd 渲染时引用 |
-| `pdks.<id>.platform_name` / `platform_config` | ORFS 平台身份与配置入口 |
-| `pdks.<id>.tech_lef` / `cell_lef` | 技术 LEF 与单元 LEF，可分别放置 |
-| `pdks.<id>.liberty` / `gds` / `cdl` | 按版本对应登记的文件列表，不能任意混用库版本 |
-| `pdks.<id>.klayout_tech` / `layer_properties` | KLayout 技术文件与图层显示文件 |
-| `pdks.<id>.tapcell_script` | 已登记平台的 tap 配方文件，仅检查存在性，不执行 |
-| `pdks.<id>.cells` | 首批开放读取的单元名单、角色及角色依据 |
-
-示例中的 SKY130 路径和单元名来自本次 WSL 扫描，是可编辑的工艺配置数据。后端不写死这些名称；添加工艺或替换库时改该配置并重新核验。当前解析器仅支持登记的 LEF/Liberty 基础子集，配置存在并不意味着 FinFET/GAA 三维或真实流程已经实现。
-
-## 填写后的检查
-
-在项目根目录运行：
+服务器只维护 `server.local.sh`。首次部署复制 `server.example.sh`，编辑脚本中的 ORFS、工具、PDK 和监听地址，然后在同一个 shell 中 `source`。Python 程序只读取该 shell 继承的 `DLL_*` 环境变量，不会搜索另一份配置、读取 JSON 覆盖项或猜测服务器路径。
 
 ```bash
-python3 -m backend.manage --config config/server.local.json doctor --probe-tools --write-report
-python3 -m backend.manage --config config/server.local.json library --pdk sky130hd --write-report
-python3 -m backend.app --config config/server.local.json
+cp config/server.example.sh config/server.local.sh
+nano config/server.local.sh
+source config/server.local.sh
 ```
 
-检查命令不带 `--write-report` 时只输出终端，不创建目录。`doctor` 返回码 0 表示 Linux 下已登记的必需路径/工具检查通过，1 表示缺失或查询失败，2 表示配置格式或读取错误。Blender 留空时是 `unconfigured`，不阻止当前的库资料展示；不能因此声称建模环境已验收。路径/版本检查通过也不会启用 ORFS 运行。
+示例默认假设项目与 ORFS 并排：项目根目录由配置脚本所在位置计算，ORFS 路径由 `DLL_ORFS_ROOT` 设置。若 ORFS 名称/位置不同，只需修改这一行：
 
-WSL 验证使用被 Git 忽略的 `wsl.local.json`，只是一份独立的本机配置，不是服务器配置的覆盖层，不会由服务自动读取。服务器使用自己的 `server.local.json`。
+```bash
+export DLL_ORFS_ROOT="${DLL_PROJECT_ROOT}/../OpenROAD-flow-scripts"
+```
+
+项目移动时脚本会重新定位项目根。若 PDK 仍使用 ORFS 标准 SKY130 HD 目录结构，改 ORFS 根后，`DLL_FLOW_HOME`、`DLL_PDK_ROOT` 及库文件路径会跟着派生。其它安装方式就修改对应的 `DLL_PDK_*` 路径。工具可填写完整路径；也可填写命令名，此时仅从当前 shell 的 PATH 查找。Blender 目前可留空。
+
+## 关键变量
+
+| 变量组 | 用途 |
+| --- | --- |
+| `DLL_PROJECT_ROOT` | 项目根目录；由脚本位置计算，不需要手工填 |
+| `DLL_ORFS_ROOT` / `DLL_FLOW_HOME` / `DLL_PLATFORMS_ROOT` | ORFS 根、flow 和平台目录 |
+| `DLL_PDK_*` | 工艺 ID、资料文件与可浏览单元登记；单元每行写成 `name|role|evidence` |
+| `DLL_PYTHON`、`DLL_MAKE`、`DLL_OPENROAD`、`DLL_YOSYS`、`DLL_KLAYOUT`、`DLL_BLENDER` | 工具路径或 PATH 中的命令名 |
+| `DLL_HOST` / `DLL_PORT` | 服务监听地址和端口；供其它电脑访问时通常将 host 设为 `0.0.0.0` |
+| `DLL_RUNTIME_ROOT` 及其子目录 | 任务、报告、日志和导出目录，必须独立于 ORFS/PDK/源文件 |
+| `DLL_EXECUTABLE_PATHS` / `DLL_LIBRARY_PATHS` | 子进程的 PATH 与 LD_LIBRARY_PATH 前缀，多个目录用冒号分隔 |
+| `DLL_PROBE_TIMEOUT_SECONDS`、`DLL_WORKER_COUNT`、`DLL_THREADS_PER_RUN`、`DLL_JOB_TIMEOUT_SECONDS` | 工具核验超时与未来任务资源参数；当前没有任务执行器 |
+| `DLL_SERVICE_USER` / `DLL_BASH` | 可选 systemd 渲染使用的服务账户和 Bash 入口 |
+
+`DLL_PDK_LIBERTY`、`DLL_PDK_GDS` 和 `DLL_PDK_CDL` 支持每行一个文件。`DLL_PDK_CELLS` 支持每行一个单元，字段间使用竖线。请保留每个库文件的 PDK 和版本对应关系。当前版本登记一个 PDK；SKY130 单元名只在示例脚本中出现，后端不预设这些名字。
+
+## 检查与启动
+
+每次打开新的 shell 时先加载脚本：
+
+```bash
+source config/server.local.sh
+"$DLL_PYTHON" -m backend.manage doctor --probe-tools --write-report
+"$DLL_PYTHON" -m backend.manage library --pdk "$DLL_PDK_ID" --write-report
+"$DLL_PYTHON" -m backend.app
+```
+
+`doctor` 只检查已登记路径并按要求查询工具版本，不运行 ORFS 设计流程。退出码 0 表示必需路径与工具入口可用，1 表示检查有缺项，2 表示配置格式或读取错误。报告只写到 `DLL_REPORTS_ROOT` 下。
+
+前台启动的进程继承当前 shell 环境；退出该 shell 后变量不会留在系统中。systemd 模板渲染也从同一份本地脚本获取配置：
+
+```bash
+"$DLL_PYTHON" -m backend.manage render-service --write
+```
+
+此命令只生成 unit 文件，不安装、不启用 systemd 服务。API 密钥不属于本配置。`server.local.sh` 被 Git 忽略；请不要提交本地服务器路径或凭据。

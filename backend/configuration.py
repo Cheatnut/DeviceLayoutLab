@@ -1,108 +1,158 @@
-"""加载唯一部署配置并解析字段引用。
-
-所有路径在配置文件中登记。相对路径以配置文件所在目录为基准，引用字段的
-路径先解析为绝对路径，再拼接后续目录；这样改变根目录不会产生二次相对解析。
-不自动扫描用户目录、不叠加环境配置，也不加载第二份配置覆盖当前值。
-"""
+"""读取唯一 shell 配置导出的环境变量并检查路径隔离。"""
 
 from __future__ import annotations
 
-import json
 import os
 import re
+import shlex
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 class ConfigurationError(ValueError):
-    """部署配置无效；启动前返回字段名而不是继续猜测。"""
+    """配置缺项或不满足安全约束时，在启动前给出清晰错误。"""
 
 
-REFERENCE = re.compile(r"\$\{([A-Za-z0-9_.-]+)\}")
 GENERATED_ROOTS = ("runtime_root", "jobs_root", "reports_root", "logs_root", "exports_root")
 PDK_FILE_KEYS = ("platform_config", "tech_lef", "cell_lef", "klayout_tech", "layer_properties", "tapcell_script")
 PDK_LIST_KEYS = ("liberty", "gds", "cdl")
 
 
-def _is_path_field(key: str) -> bool:
-    parts = key.split(".")
-    if parts[0] == "paths":
-        return True
-    if parts[0] == "pdks" and len(parts) == 3:
-        return parts[2] in (*PDK_FILE_KEYS, *PDK_LIST_KEYS, "root")
-    return key in {"orfs.makefile", "orfs.scripts_dir", "orfs.utils_dir", "deployment.app_script",
-                   "environment.executable_paths", "environment.library_paths"}
+def _required(env: Mapping[str, str], name: str) -> str:
+    value = env.get(name, "").strip()
+    if not value:
+        raise ConfigurationError(f"缺少环境变量 {name}；请先 source config/server.local.sh")
+    return value
+
+
+def _lines(value: str) -> list[str]:
+    return [item.strip() for item in value.splitlines() if item.strip()]
+
+
+def _cells(value: str) -> list[dict[str, str]]:
+    result = []
+    for line in _lines(value):
+        parts = [part.strip() for part in line.split("|", 2)]
+        if len(parts) != 3 or not all(parts):
+            raise ConfigurationError("DLL_PDK_CELLS 每行必须是 name|role|evidence")
+        result.append(dict(zip(("name", "role", "evidence"), parts)))
+    return result
 
 
 class ServerConfiguration:
-    def __init__(self, config_path: Path | str):
-        self.source = Path(config_path).resolve()
-        try:
-            # utf-8-sig 兼容服务器及 Windows 编辑器写入的 UTF-8 BOM。
-            self.raw = json.loads(self.source.read_text(encoding="utf-8-sig"))
-        except (OSError, ValueError) as error:
-            raise ConfigurationError(f"无法读取配置：{self.source}：{error}") from error
-        if not isinstance(self.raw, dict) or type(self.raw.get("schema_version")) is not int or self.raw.get("schema_version") != 1:
-            raise ConfigurationError("schema_version 必须为 1")
-        self._cache: dict[str, Any] = {}
-        self._resolving: list[str] = []
+    """以 source 脚本导出的 DLL_* 变量构造运行期配置。"""
+
+    def __init__(self, env: Mapping[str, str] | None = None):
+        environment = os.environ if env is None else env
+        project_root = Path(_required(environment, "DLL_PROJECT_ROOT")).expanduser().resolve()
+        orfs_root = Path(_required(environment, "DLL_ORFS_ROOT")).expanduser().resolve()
+        flow_home = Path(_required(environment, "DLL_FLOW_HOME")).expanduser().resolve()
+        platforms_root = Path(_required(environment, "DLL_PLATFORMS_ROOT")).expanduser().resolve()
+        pdk_root = Path(_required(environment, "DLL_PDK_ROOT")).expanduser().resolve()
+        runtime_root = Path(_required(environment, "DLL_RUNTIME_ROOT")).expanduser().resolve()
+        jobs_root = Path(_required(environment, "DLL_JOBS_ROOT")).expanduser().resolve()
+        reports_root = Path(_required(environment, "DLL_REPORTS_ROOT")).expanduser().resolve()
+        logs_root = Path(_required(environment, "DLL_LOGS_ROOT")).expanduser().resolve()
+        exports_root = Path(_required(environment, "DLL_EXPORTS_ROOT")).expanduser().resolve()
+
+        pdk_id = _required(environment, "DLL_PDK_ID")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", pdk_id):
+            raise ConfigurationError("DLL_PDK_ID 只能包含英文字母、数字、下划线和连字符")
+
+        def pdk_path(name: str) -> str:
+            return str(Path(_required(environment, name)).expanduser().resolve())
+
+        def tool(name: str, default_args: str = "--version") -> dict[str, Any]:
+            executable = environment.get(f"DLL_{name.upper()}", "").strip()
+            try:
+                args = shlex.split(environment.get(f"DLL_{name.upper()}_VERSION_ARGS", default_args))
+            except ValueError as error:
+                raise ConfigurationError(f"DLL_{name.upper()}_VERSION_ARGS 格式错误：{error}") from error
+            return {"executable": executable, "version_args": args}
+
+        source = Path(_required(environment, "DLL_CONFIG_SCRIPT")).expanduser().resolve()
+        pdk = {
+            "title": _required(environment, "DLL_PDK_TITLE"),
+            "device_family": _required(environment, "DLL_PDK_DEVICE_FAMILY"),
+            "platform_name": _required(environment, "DLL_PDK_PLATFORM_NAME"),
+            "root": str(pdk_root),
+            "platform_config": pdk_path("DLL_PDK_PLATFORM_CONFIG"),
+            "tech_lef": pdk_path("DLL_PDK_TECH_LEF"),
+            "cell_lef": pdk_path("DLL_PDK_CELL_LEF"),
+            "liberty": [str(Path(item).expanduser().resolve()) for item in _lines(_required(environment, "DLL_PDK_LIBERTY"))],
+            "gds": [str(Path(item).expanduser().resolve()) for item in _lines(_required(environment, "DLL_PDK_GDS"))],
+            "cdl": [str(Path(item).expanduser().resolve()) for item in _lines(_required(environment, "DLL_PDK_CDL"))],
+            "klayout_tech": pdk_path("DLL_PDK_KLAYOUT_TECH"),
+            "layer_properties": pdk_path("DLL_PDK_LAYER_PROPERTIES"),
+            "tapcell_script": pdk_path("DLL_PDK_TAPCELL_SCRIPT"),
+            "cells": _cells(_required(environment, "DLL_PDK_CELLS")),
+        }
+        path_values = {
+            "project_root": str(project_root),
+            "frontend_root": str(Path(_required(environment, "DLL_FRONTEND_ROOT")).expanduser().resolve()),
+            "case_catalog": str(Path(_required(environment, "DLL_CASE_CATALOG")).expanduser().resolve()),
+            "runtime_root": str(runtime_root), "jobs_root": str(jobs_root), "reports_root": str(reports_root),
+            "logs_root": str(logs_root), "exports_root": str(exports_root),
+            "environment_report": str(reports_root / "environment.json"),
+            "library_index": str(reports_root / "library.json"),
+            "service_unit": str(exports_root / "device-layout-lab.service"),
+            "orfs_root": str(orfs_root), "flow_home": str(flow_home), "platforms_root": str(platforms_root),
+            "pdk_root": str(pdk_root),
+            "service_template": str(Path(_required(environment, "DLL_SERVICE_TEMPLATE")).expanduser().resolve()),
+        }
+        self.source = source
+        self.raw: dict[str, Any] = {
+            "schema_version": 1,
+            "paths": path_values,
+            "server": {"host": _required(environment, "DLL_HOST"), "port": self._int(environment, "DLL_PORT")},
+            "tools": {
+                "python": tool("python", "--version"), "make": tool("make"),
+                "openroad": tool("openroad", "-version"), "yosys": tool("yosys", "-V"),
+                "klayout": tool("klayout", "-v"), "blender": tool("blender"),
+            },
+            "environment": {
+                "variables": {"QT_QPA_PLATFORM": environment.get("DLL_QT_QPA_PLATFORM", "offscreen")},
+                "executable_paths": self._path_list(environment.get("DLL_EXECUTABLE_PATHS", "")),
+                "library_paths": self._path_list(environment.get("DLL_LIBRARY_PATHS", "")),
+            },
+            "orfs": {
+                "makefile": str(flow_home / "Makefile"), "scripts_dir": str(flow_home / "scripts"),
+                "utils_dir": str(flow_home / "util"),
+                "probe_timeout_seconds": self._int(environment, "DLL_PROBE_TIMEOUT_SECONDS"),
+                "worker_count": self._int(environment, "DLL_WORKER_COUNT"),
+                "threads_per_run": self._int(environment, "DLL_THREADS_PER_RUN"),
+                "job_timeout_seconds": self._int(environment, "DLL_JOB_TIMEOUT_SECONDS"),
+            },
+            "deployment": {
+                "service_user": environment.get("DLL_SERVICE_USER", ""),
+                "app_script": str(project_root / "backend" / "app.py"),
+                "launcher": str(project_root / "deploy" / "run-with-config.sh"),
+                "shell": _required(environment, "DLL_BASH"),
+            },
+            "pdks": {pdk_id: pdk},
+        }
         self._validate()
 
+    @staticmethod
+    def _int(env: Mapping[str, str], name: str) -> int:
+        value = _required(env, name)
+        try:
+            return int(value)
+        except ValueError as error:
+            raise ConfigurationError(f"{name} 必须是整数") from error
+
+    @staticmethod
+    def _path_list(value: str) -> list[str]:
+        return [str(Path(item).expanduser().resolve()) for item in value.split(os.pathsep) if item]
+
     def get(self, key: str) -> Any:
-        """解析点分隔字段，检测引用环和指向不存在字段的引用。"""
-        if key in self._cache:
-            return self._cache[key]
-        if key in self._resolving:
-            raise ConfigurationError(f"配置引用循环：{' -> '.join([*self._resolving, key])}")
         value: Any = self.raw
         for part in key.split("."):
             if not isinstance(value, dict) or part not in value:
                 raise ConfigurationError(f"配置字段不存在：{key}")
             value = value[part]
-        self._resolving.append(key)
-        try:
-            resolved = self._resolve_value(key, value)
-            self._cache[key] = resolved
-            return resolved
-        finally:
-            self._resolving.pop()
-
-    def _resolve_value(self, key: str, value: Any) -> Any:
-        if isinstance(value, list):
-            return [self._resolve_value(key, item) for item in value]
-        if isinstance(value, dict):
-            return {name: self._resolve_value(f"{key}.{name}", item) for name, item in value.items()}
-        if not isinstance(value, str):
-            return value
-
-        def replace_reference(match: re.Match[str]) -> str:
-            referenced = self.get(match.group(1))
-            if not isinstance(referenced, str) or not referenced:
-                raise ConfigurationError(f"{key} 引用的字段必须为非空字符串：{match.group(1)}")
-            return referenced
-
-        expanded = REFERENCE.sub(replace_reference, value)
-        if "${" in expanded:
-            raise ConfigurationError(f"字段引用格式无效：{key}")
-        if _is_path_field(key):
-            if not expanded.strip():
-                raise ConfigurationError(f"路径字段不能为空：{key}")
-            # 禁止把另一操作系统的绝对路径误解析为本机相对路径。
-            if os.name != "nt" and re.match(r"^[A-Za-z]:[\\/]", expanded):
-                raise ConfigurationError(f"Linux 配置中不能使用 Windows 盘符：{key}")
-            path = Path(expanded).expanduser()
-            if not path.is_absolute():
-                path = self.source.parent / path
-            return str(path.resolve())
-        if key.startswith("tools.") and key.endswith(".executable"):
-            if expanded and ("/" in expanded or "\\" in expanded):
-                if os.name != "nt" and re.match(r"^[A-Za-z]:[\\/]", expanded):
-                    raise ConfigurationError(f"Linux 工具入口不能使用 Windows 盘符：{key}")
-                path = Path(expanded).expanduser()
-                # 工具入口保留符号链接，尤其不能把 venv/bin/python 转成系统 Python。
-                return os.path.abspath(path if path.is_absolute() else self.source.parent / path)
-        return expanded
+        return value
 
     def path(self, key: str) -> Path:
         value = self.get(key)
@@ -111,17 +161,17 @@ class ServerConfiguration:
         return Path(value)
 
     def tool(self, name: str) -> Path | None:
-        """入口有目录时按显式路径读取；裸命令只在配置指定的 PATH 环境中定位。"""
+        """按脚本提供的入口定位工具；裸命令只使用继承到的 PATH。"""
         executable = self.get(f"tools.{name}.executable")
         if not executable:
             return None
-        if Path(executable).is_absolute():
-            return Path(executable)
+        if "/" in executable or "\\" in executable:
+            path = Path(executable).expanduser()
+            return Path(os.path.abspath(path))
         located = shutil.which(executable, path=self.subprocess_environment().get("PATH"))
         return Path(os.path.abspath(located)) if located else None
 
     def subprocess_environment(self) -> dict[str, str]:
-        """只对子进程应用配置，不 source ORFS 脚本或修改系统环境。"""
         environment = dict(os.environ)
         environment.update(self.get("environment.variables"))
         for field, variable in (("executable_paths", "PATH"), ("library_paths", "LD_LIBRARY_PATH")):
@@ -131,71 +181,38 @@ class ServerConfiguration:
         return environment
 
     def _validate(self) -> None:
-        required_paths = (*GENERATED_ROOTS, "project_root", "frontend_root", "case_catalog", "orfs_root",
-                          "flow_home", "platforms_root", "pdk_root", "service_template")
-        for key in required_paths:
-            if not isinstance(self.get(f"paths.{key}"), str):
-                raise ConfigurationError(f"paths.{key} 必须是字符串")
-        host, port = self.get("server.host"), self.get("server.port")
-        if not isinstance(host, str) or not host.strip() or any(char.isspace() for char in host):
-            raise ConfigurationError("server.host 必须为非空主机或监听地址")
-        if type(port) is not int or not 0 <= port <= 65535:
-            raise ConfigurationError("server.port 必须在 0–65535 范围内；0 用于测试时分配端口")
-        for name in ("python", "make", "openroad", "yosys", "klayout", "blender"):
-            executable = self.get(f"tools.{name}.executable")
-            args = self.get(f"tools.{name}.version_args")
-            if not isinstance(executable, str) or not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
-                raise ConfigurationError(f"tools.{name} 必须包含字符串入口和字符串参数列表")
-        for field in ("executable_paths", "library_paths"):
-            entries = self.get(f"environment.{field}")
-            if not isinstance(entries, list) or not all(isinstance(item, str) for item in entries):
-                raise ConfigurationError(f"environment.{field} 必须为路径列表")
-        variables = self.get("environment.variables")
-        if not isinstance(variables, dict) or not all(isinstance(key, str) and isinstance(value, str) for key, value in variables.items()):
-            raise ConfigurationError("environment.variables 必须是字符串键值表")
+        if not self.get("server.host").strip() or any(char.isspace() for char in self.get("server.host")):
+            raise ConfigurationError("DLL_HOST 必须为非空主机或监听地址")
+        port = self.get("server.port")
+        if not 0 <= port <= 65535:
+            raise ConfigurationError("DLL_PORT 必须在 0–65535 范围内")
         for field in ("probe_timeout_seconds", "worker_count", "threads_per_run", "job_timeout_seconds"):
-            value = self.get(f"orfs.{field}")
-            if type(value) is not int or value <= 0:
+            if self.get(f"orfs.{field}") <= 0:
                 raise ConfigurationError(f"orfs.{field} 必须为正整数")
-        for field in ("makefile", "scripts_dir", "utils_dir"):
-            self.path(f"orfs.{field}")
-        self.path("deployment.app_script")
-        if not isinstance(self.get("deployment.service_user"), str):
-            raise ConfigurationError("deployment.service_user 必须为字符串")
+        for name in ("python", "make", "openroad", "yosys", "klayout", "blender"):
+            entry = self.get(f"tools.{name}")
+            if not isinstance(entry["executable"], str) or not all(isinstance(arg, str) for arg in entry["version_args"]):
+                raise ConfigurationError(f"tools.{name} 工具入口或版本参数无效")
         pdks = self.get("pdks")
-        if not isinstance(pdks, dict) or not pdks:
-            raise ConfigurationError("pdks 必须至少登记一个工艺配置")
-        for pdk_id, pdk in pdks.items():
-            if not re.fullmatch(r"[A-Za-z0-9_-]+", pdk_id):
-                raise ConfigurationError(f"工艺 ID 无效：{pdk_id}")
-            for field in ("title", "device_family", "platform_name", "root", *PDK_FILE_KEYS):
-                if not isinstance(pdk.get(field), str) or not pdk[field]:
-                    raise ConfigurationError(f"pdks.{pdk_id}.{field} 必须为非空字符串")
-            for field in PDK_LIST_KEYS:
-                if not isinstance(pdk.get(field), list) or not all(isinstance(item, str) for item in pdk[field]):
-                    raise ConfigurationError(f"pdks.{pdk_id}.{field} 必须为路径列表")
-            cells = pdk.get("cells")
-            if not isinstance(cells, list):
-                raise ConfigurationError(f"pdks.{pdk_id}.cells 必须为列表")
-            names: set[str] = set()
-            for cell in cells:
-                if not isinstance(cell, dict) or not all(isinstance(cell.get(key), str) and cell[key] for key in ("name", "role", "evidence")):
-                    raise ConfigurationError(f"pdks.{pdk_id}.cells 每项需要 name / role / evidence")
-                if cell["name"] in names:
-                    raise ConfigurationError(f"单元重复登记：{pdk_id}/{cell['name']}")
-                names.add(cell["name"])
+        pdk_id, pdk = next(iter(pdks.items()))
+        if not pdk["cells"]:
+            raise ConfigurationError(f"DLL_PDK_CELLS 未登记任何单元：{pdk_id}")
+        names: set[str] = set()
+        for cell in pdk["cells"]:
+            if cell["name"] in names:
+                raise ConfigurationError(f"单元重复登记：{pdk_id}/{cell['name']}")
+            names.add(cell["name"])
         self._validate_output_isolation()
-        for file_key, root_key in (("environment_report", "reports_root"), ("library_index", "reports_root"), ("service_unit", "exports_root")):
-            output = self.path(f"paths.{file_key}")
-            root = self.path(f"paths.{root_key}")
+        for file_key, root_key in (("environment_report", "reports_root"), ("library_index", "reports_root"),
+                                   ("service_unit", "exports_root")):
+            output, root = self.path(f"paths.{file_key}"), self.path(f"paths.{root_key}")
             if output == root or not output.is_relative_to(root):
                 raise ConfigurationError(f"paths.{file_key} 必须位于 paths.{root_key} 内")
 
     def _validate_output_isolation(self) -> None:
-        # 输出根与外部工具/PDK、原始静态资料、配置目录均不可重叠；解析符号链接后比较。
         protected = [self.path("paths.orfs_root"), self.path("paths.pdk_root"), self.path("paths.frontend_root"),
-                     self.path("paths.case_catalog").parent, self.source.parent, self.path("paths.service_template").parent]
-        protected.extend(self.path(f"pdks.{pdk_id}.root") for pdk_id in self.get("pdks"))
+                     self.path("paths.case_catalog").parent, self.source.parent,
+                     self.path("paths.service_template").parent]
         protected.extend(Path(pdk[field]) for pdk in self.get("pdks").values() for field in PDK_FILE_KEYS)
         protected.extend(Path(item) for pdk in self.get("pdks").values() for field in PDK_LIST_KEYS for item in pdk[field])
         project = self.path("paths.project_root")
@@ -208,5 +225,5 @@ class ServerConfiguration:
                     raise ConfigurationError(f"生成目录与只读源重叠：paths.{key}")
 
 
-def load_configuration(config_path: Path | str) -> ServerConfiguration:
-    return ServerConfiguration(config_path)
+def load_configuration(env: Mapping[str, str] | None = None) -> ServerConfiguration:
+    return ServerConfiguration(env)

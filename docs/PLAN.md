@@ -372,6 +372,6 @@ Agent 首批上下文已确认结构化数据为主，截图理解后续扩展�
 
 ## 13. 当前实现记录（2026-09-29）
 
-用户已授权启动开发，并要求 Windows 开发、Linux 从 GitHub 拉取运行。当前完成：二维/Three.js 工作台骨架、独立后端、显式唯一 JSON 配置、只读环境检查、真实 LEF/Liberty 单元资料读取和配置驱动的 systemd 文本生成。实际路径与工具不在代码中固定。
+用户已授权启动开发，并要求 Windows 开发、Linux 从 GitHub 拉取运行。当前完成：二维/Three.js 工作台骨架、独立后端、source shell 单一配置、只读环境检查、真实 LEF/Liberty 单元资料读取和同配置脚本驱动的 systemd 文本生成。实际路径与工具不在代码中固定。
 
 按用户指定扫描 WSL 的 ORFS 并读取六个 SKY130 单元；目录关系与版本见 [ORFS_SCAN.md](ORFS_SCAN.md)。本次 WSL 核验不替代服务器核验。工艺库面板可显示真实边界、引脚图层和逻辑函数，三维仍是教学抽象。ORFS 任务执行器、真实阶段快照、Blender/GDS 器件重建和 Agent 尚未实现。

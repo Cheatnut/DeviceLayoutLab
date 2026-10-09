@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User={{service_user}}
 WorkingDirectory={{project_root}}
-ExecStart={{python_executable}} {{app_script}} --config {{config_file}}
+ExecStart={{shell}} {{launcher}} {{config_script}} -m backend.app
 Restart=on-failure
 RestartSec=3
 

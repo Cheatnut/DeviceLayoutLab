@@ -1,13 +1,12 @@
 """用可检查的微型库验证 LEF/Liberty 提取，避免以画面重叠推断连接。"""
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from backend.configuration import load_configuration
 from backend.library import LibraryStore, parse_lef_cell, parse_liberty_cell, parse_liberty_metadata, parse_tech_lef
-from helpers import test_document, write_test_configuration
+from helpers import temporary_directory, test_environment
 
 
 LEF = """MACRO demo_inv
@@ -89,26 +88,24 @@ class LibraryParsingTest(unittest.TestCase):
         self.assertEqual(metadata["operating_conditions"][0]["voltage"], "1.8")
 
     def test_store_reloads_changed_source_and_rejects_unregistered_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
-            document = test_document(root)
-            pdk = document["pdks"]["sky130hd"]
-            pdk["cells"] = [{"name": "demo_inv", "role": "反相器", "evidence": "fixture function"}]
+            environment = test_environment(root)
             sources = root / "sources"
             sources.mkdir()
-            for field, filename, text in (("cell_lef", "cells.lef", LEF), ("tech_lef", "tech.lef", TECH)):
+            for field, filename, text in (("DLL_PDK_CELL_LEF", "cells.lef", LEF), ("DLL_PDK_TECH_LEF", "tech.lef", TECH)):
                 path = sources / filename
                 path.write_text(text, encoding="utf-8")
-                pdk[field] = str(path)
+                environment[field] = str(path)
             liberty = sources / "corner.lib"
             liberty.write_text(LIBERTY, encoding="utf-8")
-            pdk["liberty"] = [str(liberty)]
-            config = load_configuration(write_test_configuration(root, document))
+            environment["DLL_PDK_LIBERTY"] = str(liberty)
+            config = load_configuration(environment)
             store = LibraryStore(config)
             first = store.cell("sky130hd", "demo_inv")
             self.assertEqual(first["status"], "ready")
-            self.assertNotIn(str(sources), json.dumps(first))
-            Path(pdk["cell_lef"]).write_text(LEF.replace("1.38", "2.760"), encoding="utf-8")
+            self.assertNotIn(str(sources), str(first))
+            Path(environment["DLL_PDK_CELL_LEF"]).write_text(LEF.replace("1.38", "2.760"), encoding="utf-8")
             second = store.cell("sky130hd", "demo_inv")
             self.assertEqual(second["lef"]["width"], 2.76)
             self.assertNotEqual(first["sources"]["cell_lef"]["sha256"], second["sources"]["cell_lef"]["sha256"])
