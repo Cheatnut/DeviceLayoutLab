@@ -3,16 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light" />
     <title>DeviceLayoutLab</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">DEVICE · LAYOUT · CIRCUIT</p>
-          <h1>DeviceLayoutLab</h1>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="8" y="8" width="16" height="16" rx="4" /><path d="M12 2v6m8-6v6M12 24v6m8-6v6M2 12h6m-6 8h6m16-8h6m-6 8h6M12 12h8v8h-8z" /></svg>
+          </span>
+          <div>
+            <p class="eyebrow">DEVICE · LAYOUT · CIRCUIT</p>
+            <h1>DeviceLayoutLab</h1>
+          </div>
         </div>
         <div class="case-picker">
           <label for="case-select">预设案例</label>
@@ -77,7 +82,7 @@
       </section>
 
       <details class="library-panel panel">
-        <summary>工艺库 · 查看真实 LEF / Liberty 单元资料</summary>
+        <summary><span>工艺库 <span class="summary-description">查看真实 LEF / Liberty 单元资料</span></span></summary>
         <div class="library-workspace">
           <div>
             <label for="library-pdk">已登记工艺</label>

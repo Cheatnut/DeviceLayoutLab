@@ -9,7 +9,9 @@ export class TeachingScene {
     this.container = container;
     this.onPick = onPick;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color("#0c1629");
+    // 三维画布沿用页面的视觉色板；对象配色与源几何保持案例定义。
+    const theme = getComputedStyle(document.documentElement);
+    this.scene.background = new THREE.Color(theme.getPropertyValue("--scene-background").trim());
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
     this.camera.position.set(9, 8, 13);
     this.camera.lookAt(0, 0, 0);
@@ -22,11 +24,11 @@ export class TeachingScene {
     this.pointer = new THREE.Vector2();
     this.layers = new Set(["M1", "M2", "VIA1"]);
 
-    const ambient = new THREE.HemisphereLight("#c4dcff", "#17233b", 2.2);
+    const ambient = new THREE.HemisphereLight("#eaf3ff", "#8198b8", 2.2);
     const keyLight = new THREE.DirectionalLight("#ffffff", 2.5);
     keyLight.position.set(5, 10, 7);
     this.scene.add(ambient, keyLight);
-    this.scene.add(new THREE.GridHelper(18, 18, "#37537e", "#20344f"));
+    this.scene.add(new THREE.GridHelper(18, 18, theme.getPropertyValue("--scene-grid-major").trim(), theme.getPropertyValue("--scene-grid-minor").trim()));
 
     this.renderer.domElement.addEventListener("pointerdown", (event) => this.pick(event));
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -126,6 +128,8 @@ export class TeachingScene {
     const { width, height } = this.container.getBoundingClientRect();
     if (width === 0 || height === 0) return;
     this.camera.aspect = width / height;
+    // 窄画布扩大垂直视角，保留完整对象的横向取景；只调整显示，不改模型尺寸。
+    this.camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(38) / 2) / Math.min(1, this.camera.aspect / 1.9)));
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
     this.render();

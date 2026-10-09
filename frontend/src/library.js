@@ -137,7 +137,8 @@ function createPinView(lef) {
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", "真实 LEF 单元边界和引脚矩形");
   const boundary = document.createElementNS(namespace, "rect");
-  Object.entries({x: 0, y: 0, width: lef.width, height: lef.height, fill: "#192845", stroke: "#8095bb", "stroke-width": Math.max(lef.width, lef.height) / 130}).forEach(([key, value]) => boundary.setAttribute(key, String(value)));
+  boundary.setAttribute("class", "library-boundary");
+  Object.entries({x: 0, y: 0, width: lef.width, height: lef.height, "stroke-width": Math.max(lef.width, lef.height) / 130}).forEach(([key, value]) => boundary.setAttribute(key, String(value)));
   svg.append(boundary);
   lef.pins.forEach((pin, index) => {
     for (const shape of pin.geometry) {
