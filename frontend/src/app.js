@@ -67,7 +67,7 @@ function setPagePinned(pinned) {
 }
 document.querySelector("#model-pin").addEventListener("click", () => setPagePinned(!pagePinned));
 document.querySelector("#model-reset").addEventListener("click", () => scene.resetView());
-for (const [id, option] of [["model-grid", "grid"], ["model-axes", "axes"], ["model-labels", "labels"]]) {
+for (const [id, option] of [["model-grid", "grid"], ["model-labels", "labels"]]) {
   const button = document.getElementById(id);
   button.addEventListener("click", () => {
     const visible = button.getAttribute("aria-pressed") !== "true";

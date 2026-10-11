@@ -40,17 +40,7 @@ export class TeachingScene {
     keyLight.position.set(5, 10, 7);
     this.scene.add(ambient, keyLight);
     this.grid = new THREE.GridHelper(18, 18, theme.getPropertyValue("--scene-grid-major").trim(), theme.getPropertyValue("--scene-grid-minor").trim());
-    this.axes = new THREE.AxesHelper(1);
-    this.axes.visible = false;
-    this.scene.add(this.grid, this.axes);
-    this.axisLabels = ["X", "Y", "Z"].map((text, index) => {
-      const element = document.createElement("span");
-      element.className = "model-label axis-label";
-      element.textContent = text;
-      element.style.color = ["#ba4336", "#30833a", "#346ec6"][index];
-      this.labelOverlay.append(element);
-      return element;
-    });
+    this.scene.add(this.grid);
 
     bindMiddleOrbit(this.renderer.domElement, this.camera, () => {
       this.homeView = false;
@@ -152,7 +142,6 @@ export class TeachingScene {
       bounds.expandByObject(mesh);
     }
     this.zoomLimits = frameCameraToBounds(this.camera, bounds, this.target);
-    this.axes.scale.setScalar(bounds.isEmpty() ? 1 : Math.max(bounds.getSize(new THREE.Vector3()).length() / 4, 1));
     this.homeView = true;
     this.render();
   }
@@ -161,7 +150,6 @@ export class TeachingScene {
 
   setDisplay(option, visible) {
     if (option === "grid") this.grid.visible = visible;
-    if (option === "axes") this.axes.visible = visible;
     if (option === "labels") this.labelsVisible = visible;
     this.render();
   }
@@ -206,11 +194,6 @@ export class TeachingScene {
       anchor.y += this.dimensionsFor(mesh.userData.entity).y / 2;
       positionLabel(this.labels.get(id), anchor, this.labelsVisible && mesh.visible);
     }
-    this.axisLabels.forEach((label, index) => {
-      const anchor = new THREE.Vector3();
-      anchor.setComponent(index, this.axes.scale.x);
-      positionLabel(label, anchor, this.axes.visible);
-    });
   }
 
   render() {

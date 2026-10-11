@@ -109,6 +109,8 @@ input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; m
 .tool-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .tool-button:hover { background: #edf4ff; color: #2569d6; }
 .tool-button[aria-pressed="true"] { background: #e4efff; border-color: #c4dafb; color: #2366c8; }
+#model-pin svg { transition: transform .18s ease; }
+#model-pin[aria-pressed="true"] svg { transform: rotate(-35deg); }
 .model-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .model-label { position: absolute; top: 0; left: 0; font-size: 11px; font-weight: 600; line-height: 16px; color: #36506f; white-space: nowrap; text-shadow: 0 0 3px white, 0 0 6px white, 0 1px 2px white; }
 .model-label.selected { color: #125bcc; font-weight: 700; }
