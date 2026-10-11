@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "../frontend/vendor/three.module.js";
-import { bindMiddleOrbit } from "../frontend/src/orbit.js";
+import { bindMiddleOrbit, frameCameraToBounds } from "../frontend/src/orbit.js";
 
 // 使用真实 Three.js 相机与最小 DOM 事件替身验证运动约束，无需 WebGL 或外部依赖。
-function setup() {
+function setup(options = {}) {
   const canvas = new EventTarget();
   const capture = new Set();
   const classes = new Set();
@@ -17,7 +17,7 @@ function setup() {
   camera.position.set(9, 8, 13);
   const events = new EventTarget();
   let renders = 0;
-  const dispose = bindMiddleOrbit(canvas, camera, () => renders++, { events });
+  const dispose = bindMiddleOrbit(canvas, camera, () => renders++, { events, ...options });
   const send = (type, properties = {}) => {
     const event = new Event(type, { cancelable: true });
     Object.assign(event, { pointerId: 7, button: 1, buttons: 4, clientX: 100, clientY: 100 }, properties);
@@ -44,6 +44,52 @@ test("中键环绕改变视角并保持观察距离；左右键与滚轮不被�
   assert.ok(direction.dot(state.camera.position.clone().normalize().negate()) > 0.999999);
   assert.equal(state.renders(), 1);
   state.dispose();
+});
+
+test("仅固定时滚轮缩放，倍率有界且解除固定后恢复普通滚动", () => {
+  let pinned = false;
+  const state = setup({ zoomEnabled: () => pinned, zoomLimits: () => ({ min: 2, max: 50 }) });
+  const initial = state.camera.position.clone();
+  assert.equal(state.send("wheel", { deltaY: -100, deltaMode: 0 }).defaultPrevented, false);
+  assert.ok(state.camera.position.equals(initial));
+  pinned = true;
+  assert.equal(state.send("wheel", { deltaY: -100, deltaMode: 0 }).defaultPrevented, true);
+  assert.ok(state.camera.position.length() < initial.length());
+  assert.ok(state.camera.position.clone().normalize().distanceTo(initial.clone().normalize()) < 1e-10);
+  for (let i = 0; i < 100; i++) state.send("wheel", { deltaY: -10000, deltaMode: 1 });
+  assert.ok(Math.abs(state.camera.position.length() - 2) < 1e-10);
+  for (let i = 0; i < 100; i++) state.send("wheel", { deltaY: 10000, deltaMode: 2 });
+  assert.ok(Math.abs(state.camera.position.length() - 50) < 1e-10);
+  const zoomed = state.camera.position.clone();
+  assert.equal(state.send("wheel", { ctrlKey: true, deltaY: -100 }).defaultPrevented, false);
+  pinned = false;
+  assert.equal(state.send("wheel", { deltaY: -100 }).defaultPrevented, false);
+  assert.ok(state.camera.position.equals(zoomed));
+  state.dispose();
+});
+
+test("复原取景适配不同长宽比和偏移结构，所有边界角点都在视锥内", () => {
+  const bounds = new THREE.Box3(new THREE.Vector3(-8, 0, -4), new THREE.Vector3(16, 2, 6));
+  for (const aspect of [0.4, 1, 2.8]) {
+    const camera = new THREE.PerspectiveCamera(38, aspect);
+    const target = new THREE.Vector3();
+    frameCameraToBounds(camera, bounds, target);
+    const home = camera.position.clone();
+    assert.ok(target.equals(bounds.getCenter(new THREE.Vector3())));
+    for (const x of [bounds.min.x, bounds.max.x]) {
+      for (const y of [bounds.min.y, bounds.max.y]) {
+        for (const z of [bounds.min.z, bounds.max.z]) {
+          const projected = new THREE.Vector3(x, y, z).project(camera);
+          assert.ok(projected.toArray().every((value) => Math.abs(value) <= 1));
+        }
+      }
+    }
+    camera.position.set(400, -200, 12);
+    frameCameraToBounds(camera, bounds, target);
+    assert.ok(camera.position.equals(home));
+    frameCameraToBounds(camera, new THREE.Box3(), target);
+    assert.ok(camera.position.toArray().every(Number.isFinite));
+  }
 });
 
 test("极端垂直拖动保持有限坐标，松键、取消、失焦和丢失捕获均结束旋转", () => {

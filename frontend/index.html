@@ -37,7 +37,7 @@
         <aside class="sidebar panel" aria-label="工作台导航">
           <div class="sidebar-heading">
             <span class="sidebar-title">工作台</span>
-            <button id="sidebar-toggle" class="icon-button" type="button" aria-expanded="true" aria-controls="sidebar-content" aria-label="收起左侧边栏" title="收起左侧边栏">‹</button>
+            <button id="sidebar-toggle" class="icon-button" type="button" aria-expanded="true" aria-controls="sidebar-content" aria-keyshortcuts="Control+b" aria-label="收起左侧边栏" title="收起左侧边栏（Ctrl+B）">‹</button>
           </div>
           <nav class="sidebar-nav" aria-label="选择面板">
             <button type="button" data-panel="objects" aria-pressed="true" aria-controls="objects-section" aria-label="对象与图层" title="对象与图层"><span aria-hidden="true">▱</span><span class="nav-label">对象与图层</span></button>
@@ -74,14 +74,26 @@
           <article class="view-panel panel" id="model-panel">
             <div class="panel-heading">
               <h2>三维教学结构</h2>
-              <span id="model-scale">教学展开 × 1.0</span>
+              <div class="model-toolbar" role="group" aria-label="三维视图工具">
+                <button id="model-reset" class="tool-button" type="button" aria-label="复原视角" title="复原视角并适配结构">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6" /></svg>
+                </button>
+                <button id="model-pin" class="tool-button" type="button" aria-pressed="false" aria-label="固定页面" title="固定页面，滚轮缩放三维">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3 6 6-4 1-4 5v3l-3-3-6 6m6-6-4-4h3l5-4z" /></svg>
+                </button>
+                <button id="model-grid" class="tool-button" type="button" aria-pressed="true" aria-label="显示网格" title="显示网格">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1" /><path d="M9 3v18M15 3v18M3 9h18M3 15h18" /></svg>
+                </button>
+                <button id="model-axes" class="tool-button" type="button" aria-pressed="false" aria-label="显示坐标轴" title="显示坐标轴">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v12h12M9 15l-6 6M6 6l3-3 3 3m6 6 3 3-3 3M3 17v4h4" /></svg>
+                </button>
+                <button id="model-labels" class="tool-button" type="button" aria-pressed="true" aria-label="显示文本" title="显示对象标注">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8" /></svg>
+                </button>
+              </div>
             </div>
             <div id="model-view" class="model-view" aria-label="Three.js 三维教学模型"></div>
-            <p class="model-hint">按住中键拖动旋转 · 滚轮上下浏览 · 左键选择对象</p>
-            <label class="explode-control" for="explode-range">
-              拆解显示
-              <input id="explode-range" type="range" min="0" max="100" value="0" />
-            </label>
+            <p id="model-hint" class="model-hint" aria-live="polite">中键拖动旋转 · 滚轮上下浏览 · 左键选择对象</p>
           </article>
         </section>
 
@@ -102,7 +114,7 @@
 
       <footer class="evidence-note">
         <span>教学场景、工艺重建和 ORFS 结果分别标注来源。</span>
-        <span>三维拆解只改变显示，不改变电气拓扑或真实几何。</span>
+        <span>三维观察只改变视角，不改变电气拓扑或真实几何。</span>
       </footer>
     </main>
     <script type="module" src="./src/app.js"></script>

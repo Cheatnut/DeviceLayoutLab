@@ -1,5 +1,5 @@
 import * as THREE from "../vendor/three.module.js";
-import { bindMiddleOrbit } from "./orbit.js";
+import { bindMiddleOrbit, frameCameraToBounds } from "./orbit.js";
 
 /**
  * 只负责浏览器中的教学三维视图。
@@ -20,6 +20,16 @@ export class TeachingScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.container.append(this.renderer.domElement);
     this.entityMeshes = new Map();
+    this.target = new THREE.Vector3();
+    this.zoomEnabled = false;
+    this.labelsVisible = true;
+    this.homeView = true;
+    this.zoomLimits = { min: 1, max: 100 };
+    this.labels = new Map();
+    this.labelOverlay = document.createElement("div");
+    this.labelOverlay.className = "model-labels";
+    this.labelOverlay.setAttribute("aria-hidden", "true");
+    this.container.append(this.labelOverlay);
     this.selectedId = null;
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -29,9 +39,23 @@ export class TeachingScene {
     const keyLight = new THREE.DirectionalLight("#ffffff", 2.5);
     keyLight.position.set(5, 10, 7);
     this.scene.add(ambient, keyLight);
-    this.scene.add(new THREE.GridHelper(18, 18, theme.getPropertyValue("--scene-grid-major").trim(), theme.getPropertyValue("--scene-grid-minor").trim()));
+    this.grid = new THREE.GridHelper(18, 18, theme.getPropertyValue("--scene-grid-major").trim(), theme.getPropertyValue("--scene-grid-minor").trim());
+    this.axes = new THREE.AxesHelper(1);
+    this.axes.visible = false;
+    this.scene.add(this.grid, this.axes);
+    this.axisLabels = ["X", "Y", "Z"].map((text, index) => {
+      const element = document.createElement("span");
+      element.className = "model-label axis-label";
+      element.textContent = text;
+      element.style.color = ["#ba4336", "#30833a", "#346ec6"][index];
+      this.labelOverlay.append(element);
+      return element;
+    });
 
-    bindMiddleOrbit(this.renderer.domElement, this.camera, () => this.render());
+    bindMiddleOrbit(this.renderer.domElement, this.camera, () => {
+      this.homeView = false;
+      this.render();
+    }, { target: this.target, zoomEnabled: () => this.zoomEnabled, zoomLimits: () => this.zoomLimits });
     this.renderer.domElement.addEventListener("pointerdown", (event) => {
       // 中键只观察，左键仍用于二维/三维对象联动选取。
       if (event.button === 0 && !(event.buttons & 4)) this.pick(event);
@@ -43,17 +67,28 @@ export class TeachingScene {
   }
 
   setCase(caseData) {
-    for (const mesh of this.entityMeshes.values()) this.scene.remove(mesh);
+    for (const mesh of this.entityMeshes.values()) {
+      this.scene.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
     this.entityMeshes.clear();
+    for (const label of this.labels.values()) label.remove();
+    this.labels.clear();
     this.selectedId = null;
     const entities = caseData.entities ?? [];
     entities.forEach((entity) => {
       const mesh = this.createEntityMesh(entity);
       this.entityMeshes.set(entity.id, mesh);
       this.scene.add(mesh);
+      const label = document.createElement("span");
+      label.className = "model-label";
+      label.textContent = entity.name;
+      this.labelOverlay.append(label);
+      this.labels.set(entity.id, label);
     });
     this.applyLayerVisibility();
-    this.setExplode(0);
+    this.resetView();
   }
 
   createEntityMesh(entity) {
@@ -68,8 +103,7 @@ export class TeachingScene {
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.entity = entity;
-    mesh.userData.basePosition = new THREE.Vector3((entity.x - 130) / 17, this.baseHeight(entity), (entity.y - 65) / 17);
-    mesh.position.copy(mesh.userData.basePosition);
+    mesh.position.set((entity.x - 130) / 17, this.baseHeight(entity), (entity.y - 65) / 17);
     mesh.name = entity.id;
     return mesh;
   }
@@ -106,18 +140,29 @@ export class TeachingScene {
       const material = mesh.material;
       material.emissive.set(id === entityId ? "#1c4e9a" : "#000000");
       material.emissiveIntensity = id === entityId ? 0.9 : 0;
+      this.labels.get(id)?.classList.toggle("selected", id === entityId);
     }
     this.render();
   }
 
-  setExplode(amount) {
-    const ratio = amount / 100;
+  resetView() {
+    const bounds = new THREE.Box3();
+    // 即使临时隐藏图层，也以完整结构恢复取景，避免复原按钮改变展示对象范围。
     for (const mesh of this.entityMeshes.values()) {
-      const entity = mesh.userData.entity;
-      const base = mesh.userData.basePosition;
-      const layerOffset = entity.layer === "M2" ? 2.1 : entity.layer === "VIA1" ? 1.0 : 0;
-      mesh.position.set(base.x, base.y + ratio * layerOffset, base.z);
+      bounds.expandByObject(mesh);
     }
+    this.zoomLimits = frameCameraToBounds(this.camera, bounds, this.target);
+    this.axes.scale.setScalar(bounds.isEmpty() ? 1 : Math.max(bounds.getSize(new THREE.Vector3()).length() / 4, 1));
+    this.homeView = true;
+    this.render();
+  }
+
+  setZoomEnabled(enabled) { this.zoomEnabled = enabled; }
+
+  setDisplay(option, visible) {
+    if (option === "grid") this.grid.visible = visible;
+    if (option === "axes") this.axes.visible = visible;
+    if (option === "labels") this.labelsVisible = visible;
     this.render();
   }
 
@@ -134,12 +179,42 @@ export class TeachingScene {
     const { width, height } = this.container.getBoundingClientRect();
     if (width === 0 || height === 0) return;
     this.camera.aspect = width / height;
-    // 窄画布扩大垂直视角，保留完整对象的横向取景；只调整显示，不改模型尺寸。
-    this.camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(38) / 2) / Math.min(1, this.camera.aspect / 1.9)));
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
-    this.render();
+    if (this.homeView) this.resetView();
+    else this.render();
   }
 
-  render() { this.renderer.render(this.scene, this.camera); }
+  updateLabels() {
+    const { width, height } = this.container.getBoundingClientRect();
+    const placed = [];
+    const point = new THREE.Vector3();
+    const positionLabel = (label, position, visible) => {
+      point.copy(position).project(this.camera);
+      label.hidden = !visible || point.z < -1 || point.z > 1 || Math.abs(point.x) > 1 || Math.abs(point.y) > 1;
+      if (label.hidden) return;
+      const labelWidth = label.offsetWidth;
+      const x = THREE.MathUtils.clamp((point.x + 1) * width / 2 - labelWidth / 2, 4, Math.max(4, width - labelWidth - 4));
+      let y = Math.max(4, (1 - point.y) * height / 2 - 22);
+      // 标注只在屏幕空间错开，不移动实体；图层隐藏时相应标注同步隐藏。
+      while (y > 20 && placed.some((box) => x < box.right && x + labelWidth > box.left && Math.abs(y - box.y) < 18)) y -= 18;
+      placed.push({ left: x, right: x + labelWidth, y });
+      label.style.transform = `translate(${x}px, ${y}px)`;
+    };
+    for (const [id, mesh] of this.entityMeshes) {
+      const anchor = mesh.position.clone();
+      anchor.y += this.dimensionsFor(mesh.userData.entity).y / 2;
+      positionLabel(this.labels.get(id), anchor, this.labelsVisible && mesh.visible);
+    }
+    this.axisLabels.forEach((label, index) => {
+      const anchor = new THREE.Vector3();
+      anchor.setComponent(index, this.axes.scale.x);
+      positionLabel(label, anchor, this.axes.visible);
+    });
+  }
+
+  render() {
+    this.renderer.render(this.scene, this.camera);
+    this.updateLabels();
+  }
 }

@@ -11,8 +11,6 @@ const elements = {
   objectList: document.querySelector("#object-list"),
   layout: document.querySelector("#layout-view"),
   inspector: document.querySelector("#inspector-content"),
-  explode: document.querySelector("#explode-range"),
-  modelScale: document.querySelector("#model-scale"),
   runButton: document.querySelector("#run-button"),
   runMessage: document.querySelector("#run-message"),
 };
@@ -43,12 +41,48 @@ function setSidebarCollapsed(collapsed) {
   const toggle = document.querySelector("#sidebar-toggle");
   toggle.setAttribute("aria-expanded", String(!collapsed));
   toggle.setAttribute("aria-label", collapsed ? "展开左侧边栏" : "收起左侧边栏");
-  toggle.title = toggle.getAttribute("aria-label");
+  toggle.title = `${toggle.getAttribute("aria-label")}（Ctrl+B）`;
   toggle.textContent = collapsed ? "›" : "‹";
 }
 
-document.querySelector("#sidebar-toggle").addEventListener("click", () => {
+function toggleSidebar() {
   setSidebarCollapsed(document.querySelector("#sidebar-toggle").getAttribute("aria-expanded") === "true");
+}
+document.querySelector("#sidebar-toggle").addEventListener("click", toggleSidebar);
+
+// 固定页面时先把三维区域移入视野，再锁住文档滚动；工具栏始终可用于解除固定。
+let pagePinned = false;
+function setPagePinned(pinned) {
+  if (pinned) document.querySelector("#model-panel").scrollIntoView({ block: "center", behavior: "instant" });
+  pagePinned = pinned;
+  document.documentElement.classList.toggle("page-pinned", pinned);
+  scene.setZoomEnabled(pinned);
+  const button = document.querySelector("#model-pin");
+  button.setAttribute("aria-pressed", String(pinned));
+  button.setAttribute("aria-label", pinned ? "取消固定页面" : "固定页面");
+  button.title = pinned ? "取消固定页面（Esc）" : "固定页面，滚轮缩放三维";
+  document.querySelector("#model-hint").textContent = pinned
+    ? "中键拖动旋转 · 画布滚轮缩放 · Esc 取消固定"
+    : "中键拖动旋转 · 滚轮上下浏览 · 左键选择对象";
+}
+document.querySelector("#model-pin").addEventListener("click", () => setPagePinned(!pagePinned));
+document.querySelector("#model-reset").addEventListener("click", () => scene.resetView());
+for (const [id, option] of [["model-grid", "grid"], ["model-axes", "axes"], ["model-labels", "labels"]]) {
+  const button = document.getElementById(id);
+  button.addEventListener("click", () => {
+    const visible = button.getAttribute("aria-pressed") !== "true";
+    button.setAttribute("aria-pressed", String(visible));
+    scene.setDisplay(option, visible);
+  });
+}
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && pagePinned) setPagePinned(false);
+  // 不影响输入框、可编辑文案及浏览器其它组合键；长按只切换一次。
+  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "b"
+      && !event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) {
+    event.preventDefault();
+    if (!event.repeat) toggleSidebar();
+  }
 });
 document.querySelectorAll("[data-panel]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -88,8 +122,6 @@ async function loadCase(caseId) {
   elements.status.classList.toggle("pending", activeCase.availability !== "ready");
   elements.sourceBadge.textContent = activeCase.sourceLabel;
   elements.sourceBadge.className = `source-badge ${activeCase.sourceKind}`;
-  elements.explode.value = "0";
-  elements.modelScale.textContent = "教学展开 × 1.0";
   elements.runMessage.textContent = "";
   scene.setCase(activeCase);
   renderObjectList();
@@ -183,11 +215,6 @@ document.querySelectorAll("[data-layer]").forEach((control) => {
 });
 
 elements.select.addEventListener("change", () => loadCase(elements.select.value));
-elements.explode.addEventListener("input", () => {
-  const amount = Number(elements.explode.value);
-  scene.setExplode(amount);
-  elements.modelScale.textContent = `教学展开 × ${(1 + amount / 100).toFixed(1)}`;
-});
 elements.runButton.addEventListener("click", async () => {
   try {
     const result = await requestJson("/api/runs", "POST");
