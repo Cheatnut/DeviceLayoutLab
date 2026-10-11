@@ -1,4 +1,5 @@
 import * as THREE from "../vendor/three.module.js";
+import { bindMiddleOrbit } from "./orbit.js";
 
 /**
  * 只负责浏览器中的教学三维视图。
@@ -30,7 +31,11 @@ export class TeachingScene {
     this.scene.add(ambient, keyLight);
     this.scene.add(new THREE.GridHelper(18, 18, theme.getPropertyValue("--scene-grid-major").trim(), theme.getPropertyValue("--scene-grid-minor").trim()));
 
-    this.renderer.domElement.addEventListener("pointerdown", (event) => this.pick(event));
+    bindMiddleOrbit(this.renderer.domElement, this.camera, () => this.render());
+    this.renderer.domElement.addEventListener("pointerdown", (event) => {
+      // 中键只观察，左键仍用于二维/三维对象联动选取。
+      if (event.button === 0 && !(event.buttons & 4)) this.pick(event);
+    });
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
     this.resize();
@@ -92,6 +97,7 @@ export class TeachingScene {
     for (const mesh of this.entityMeshes.values()) {
       mesh.visible = this.layers.has(mesh.userData.entity.layer);
     }
+    this.render();
   }
 
   setSelection(entityId) {

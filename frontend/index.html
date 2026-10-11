@@ -34,14 +34,31 @@
       </section>
 
       <section class="workspace">
-        <aside class="sidebar panel">
-          <div class="panel-heading"><h2>对象与图层</h2></div>
-          <div id="object-list" class="object-list" aria-label="对象列表"></div>
-          <div class="layer-controls">
-            <p>显示图层</p>
-            <label><input type="checkbox" data-layer="M1" checked /> M1 · 单元与电源轨</label>
-            <label><input type="checkbox" data-layer="M2" checked /> M2 · 信号走线</label>
-            <label><input type="checkbox" data-layer="VIA1" checked /> VIA1 · 层间连接</label>
+        <aside class="sidebar panel" aria-label="工作台导航">
+          <div class="sidebar-heading">
+            <span class="sidebar-title">工作台</span>
+            <button id="sidebar-toggle" class="icon-button" type="button" aria-expanded="true" aria-controls="sidebar-content" aria-label="收起左侧边栏" title="收起左侧边栏">‹</button>
+          </div>
+          <nav class="sidebar-nav" aria-label="选择面板">
+            <button type="button" data-panel="objects" aria-pressed="true" aria-controls="objects-section" aria-label="对象与图层" title="对象与图层"><span aria-hidden="true">▱</span><span class="nav-label">对象与图层</span></button>
+            <button type="button" data-panel="library" aria-pressed="false" aria-controls="library-section" aria-label="工艺库" title="工艺库"><span aria-hidden="true">▦</span><span class="nav-label">工艺库</span></button>
+          </nav>
+          <div id="sidebar-content">
+            <section id="objects-section" aria-label="对象与图层">
+              <div id="object-list" class="object-list" aria-label="对象列表"></div>
+              <div class="layer-controls">
+                <p>显示图层</p>
+                <label><input type="checkbox" data-layer="M1" checked /> M1 · 单元与电源轨</label>
+                <label><input type="checkbox" data-layer="M2" checked /> M2 · 信号走线</label>
+                <label><input type="checkbox" data-layer="VIA1" checked /> VIA1 · 层间连接</label>
+              </div>
+            </section>
+            <section id="library-section" class="library-browser" aria-label="工艺库" hidden>
+              <label for="library-pdk">已登记工艺</label>
+              <select id="library-pdk" aria-label="选择工艺库"></select>
+              <p id="library-status" aria-live="polite">正在检查工艺库…</p>
+              <div id="library-cells"></div>
+            </section>
           </div>
         </aside>
 
@@ -60,6 +77,7 @@
               <span id="model-scale">教学展开 × 1.0</span>
             </div>
             <div id="model-view" class="model-view" aria-label="Three.js 三维教学模型"></div>
+            <p class="model-hint">按住中键拖动旋转 · 滚轮上下浏览 · 左键选择对象</p>
             <label class="explode-control" for="explode-range">
               拆解显示
               <input id="explode-range" type="range" min="0" max="100" value="0" />
@@ -68,10 +86,11 @@
         </section>
 
         <aside class="inspector panel">
-          <div class="panel-heading"><h2>对象说明</h2></div>
+          <div class="panel-heading"><h2 id="inspector-title">对象说明</h2></div>
           <div id="inspector-content" class="inspector-content">
             <p>选择二维或三维对象，查看其来源、角色和教学边界。</p>
           </div>
+          <div id="library-detail" class="inspector-content" aria-live="polite" hidden></div>
           <div class="run-card">
             <h3>真实流程实验</h3>
             <p>本切片仅保留受约束运行入口；ORFS 尚未接入。</p>
@@ -80,19 +99,6 @@
           </div>
         </aside>
       </section>
-
-      <details class="library-panel panel">
-        <summary><span>工艺库 <span class="summary-description">查看真实 LEF / Liberty 单元资料</span></span></summary>
-        <div class="library-workspace">
-          <div>
-            <label for="library-pdk">已登记工艺</label>
-            <select id="library-pdk" aria-label="选择工艺库"></select>
-            <p id="library-status" aria-live="polite">正在检查工艺库…</p>
-            <div id="library-cells"></div>
-          </div>
-          <div id="library-detail" aria-live="polite"></div>
-        </div>
-      </details>
 
       <footer class="evidence-note">
         <span>教学场景、工艺重建和 ORFS 结果分别标注来源。</span>

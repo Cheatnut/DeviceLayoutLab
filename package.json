@@ -6,7 +6,8 @@
   "scripts": {
     "start": "bash -lc 'source config/server.local.sh && exec \"$DLL_PYTHON\" -m backend.app'",
     "test": "python -m unittest discover -s tests -v",
-    "check": "node --check frontend/src/app.js && node --check frontend/src/scene.js && node --check frontend/src/library.js"
+    "check": "node --check frontend/src/app.js && node --check frontend/src/scene.js && node --check frontend/src/library.js && node --check frontend/src/orbit.js",
+    "test:interaction": "node --test tests/test_orbit.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

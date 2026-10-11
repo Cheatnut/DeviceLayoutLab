@@ -23,6 +23,40 @@ let selectedId = null;
 const visibleLayers = new Set(["M1", "M2", "VIA1"]);
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
 
+// 导航只切换展示区域，保留案例选择、图层与库资料，收起后仍能直接切换面板。
+function showPanel(panel) {
+  const isLibrary = panel === "library";
+  document.querySelector("#objects-section").hidden = isLibrary;
+  document.querySelector("#library-section").hidden = !isLibrary;
+  elements.inspector.hidden = isLibrary;
+  document.querySelector("#library-detail").hidden = !isLibrary;
+  document.querySelector(".run-card").hidden = isLibrary;
+  document.querySelector("#inspector-title").textContent = isLibrary ? "库单元说明" : "对象说明";
+  document.querySelectorAll("[data-panel]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.panel === panel));
+  });
+}
+
+function setSidebarCollapsed(collapsed) {
+  document.querySelector(".workspace").classList.toggle("sidebar-collapsed", collapsed);
+  document.querySelector("#sidebar-content").hidden = collapsed;
+  const toggle = document.querySelector("#sidebar-toggle");
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+  toggle.setAttribute("aria-label", collapsed ? "展开左侧边栏" : "收起左侧边栏");
+  toggle.title = toggle.getAttribute("aria-label");
+  toggle.textContent = collapsed ? "›" : "‹";
+}
+
+document.querySelector("#sidebar-toggle").addEventListener("click", () => {
+  setSidebarCollapsed(document.querySelector("#sidebar-toggle").getAttribute("aria-expanded") === "true");
+});
+document.querySelectorAll("[data-panel]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showPanel(button.dataset.panel);
+    setSidebarCollapsed(false);
+  });
+});
+
 async function boot() {
   try {
     catalog = await requestJson("/api/cases");
@@ -115,6 +149,7 @@ function renderLayout() {
 }
 
 function selectEntity(entityId) {
+  showPanel("objects");
   selectedId = entityId;
   scene.setSelection(entityId);
   renderObjectList();

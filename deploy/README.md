@@ -1,4 +1,21 @@
-# Linux 部署
+# WSL 本地运行与后续 Linux 部署
+
+当前采用 Windows 开发 → GitHub SSH 推送 → WSL 家目录独立 clone 拉取 → WSL 运行。远程服务器部署暂缓。已有干净 clone 时直接 `git pull --ff-only origin main`，不重新覆盖目录。
+
+首次在 WSL 的 Bash 中执行：
+
+```bash
+cd "$HOME"
+git clone git@github.com:Cheatnut/DeviceLayoutLab.git
+cd DeviceLayoutLab
+cp config/server.example.sh config/server.local.sh
+```
+
+在本地脚本中将 `DLL_HOST` 设为 `127.0.0.1`，`DLL_PORT` 选择本机空闲端口。项目与 ORFS 同级时保留相对根路径，工具与 PDK 路径按实际安装填写。然后按下文检查并启动，在 Windows 浏览器访问 `http://127.0.0.1:<DLL_PORT>`。配置、运行日志和报告留在 WSL 的项目目录，忽略于 Git；Windows 工作区只开发，不直接作为服务运行目录。
+
+后续更新，在 WSL 项目目录运行 `git pull --ff-only origin main`，重新加载本地配置并重启服务；网页按 Ctrl+F5 刷新。
+
+## 后续远程服务器部署
 
 Windows 侧维护代码，Linux 服务器从 GitHub 通过 SSH 拉取。运行期需要 Python 3.10 及以上，不需要 Node.js 或公网 CDN。服务器路径、工具和 PDK 资料都填写在同一份 shell 配置脚本中，见 [配置说明](../config/README.md)。
 

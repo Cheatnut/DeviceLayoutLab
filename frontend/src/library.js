@@ -19,6 +19,11 @@ export async function initializeLibrary(requestJson) {
 
   async function selectCell(pdkId, registration) {
     const version = ++selectionVersion;
+    for (const button of list.querySelectorAll("button")) {
+      const selected = button.dataset.cell === registration.name;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    }
     message("正在读取单元资料…");
     try {
       const cell = await requestJson(`/api/library/${encodeURIComponent(pdkId)}/cells/${encodeURIComponent(registration.name)}`);
@@ -39,6 +44,8 @@ export async function initializeLibrary(requestJson) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "object-button";
+      button.dataset.cell = registration.name;
+      button.setAttribute("aria-pressed", "false");
       button.textContent = `${registration.role} · ${registration.name}`;
       button.addEventListener("click", () => selectCell(pdk.id, registration));
       list.append(button);
