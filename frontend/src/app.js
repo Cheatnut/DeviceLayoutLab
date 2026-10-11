@@ -2,6 +2,7 @@ import { TeachingScene } from "./scene.js";
 import { initializeLibrary } from "./library.js";
 
 const elements = {
+  group: document.querySelector("#case-group-select"),
   select: document.querySelector("#case-select"),
   sourceBadge: document.querySelector("#source-badge"),
   title: document.querySelector("#case-title"),
@@ -18,6 +19,7 @@ const elements = {
 let catalog = null;
 let activeCase = null;
 let selectedId = null;
+let caseRequestVersion = 0;
 const visibleLayers = new Set(["M1", "M2", "VIA1"]);
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
 
@@ -37,7 +39,7 @@ function showPanel(panel) {
 
 function setSidebarCollapsed(collapsed) {
   document.querySelector(".workspace").classList.toggle("sidebar-collapsed", collapsed);
-  document.querySelector("#sidebar-content").hidden = collapsed;
+  setPanelInert(document.querySelector("#sidebar-content"), document.querySelector("#sidebar-toggle"), collapsed);
   const toggle = document.querySelector("#sidebar-toggle");
   toggle.setAttribute("aria-expanded", String(!collapsed));
   toggle.setAttribute("aria-label", collapsed ? "展开左侧边栏" : "收起左侧边栏");
@@ -45,10 +47,29 @@ function setSidebarCollapsed(collapsed) {
   toggle.textContent = collapsed ? "›" : "‹";
 }
 
+// 折叠内容保留在布局中完成过渡，但即时禁用交互及无障碍焦点。
+function setPanelInert(content, toggle, collapsed) {
+  if (collapsed && content.contains(document.activeElement)) toggle.focus({ preventScroll: true });
+  content.inert = collapsed;
+  content.setAttribute("aria-hidden", String(collapsed));
+}
+
+function toggleInspector() {
+  const toggle = document.querySelector("#inspector-toggle");
+  const collapsed = toggle.getAttribute("aria-expanded") === "true";
+  document.querySelector(".workspace").classList.toggle("inspector-collapsed", collapsed);
+  setPanelInert(document.querySelector("#inspector-body"), toggle, collapsed);
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+  toggle.setAttribute("aria-label", collapsed ? "展开右侧边栏" : "收起右侧边栏");
+  toggle.title = `${toggle.getAttribute("aria-label")}（Ctrl+L）`;
+  toggle.textContent = collapsed ? "‹" : "›";
+}
+
 function toggleSidebar() {
   setSidebarCollapsed(document.querySelector("#sidebar-toggle").getAttribute("aria-expanded") === "true");
 }
 document.querySelector("#sidebar-toggle").addEventListener("click", toggleSidebar);
+document.querySelector("#inspector-toggle").addEventListener("click", toggleInspector);
 
 // 固定页面时先把三维区域移入视野，再锁住文档滚动；工具栏始终可用于解除固定。
 let pagePinned = false;
@@ -78,10 +99,11 @@ for (const [id, option] of [["model-grid", "grid"], ["model-labels", "labels"]])
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && pagePinned) setPagePinned(false);
   // 不影响输入框、可编辑文案及浏览器其它组合键；长按只切换一次。
-  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "b"
-      && !event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) {
+  const shortcut = event.key.toLowerCase();
+  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && ["b", "l"].includes(shortcut)
+      && !event.target.closest?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) {
     event.preventDefault();
-    if (!event.repeat) toggleSidebar();
+    if (!event.repeat) (shortcut === "b" ? toggleSidebar : toggleInspector)();
   }
 });
 document.querySelectorAll("[data-panel]").forEach((button) => {
@@ -103,7 +125,20 @@ async function boot() {
 }
 
 function populateCasePicker() {
-  for (const caseSummary of catalog.cases) {
+  elements.group.replaceChildren();
+  for (const group of catalog.groups) {
+    const option = document.createElement("option");
+    option.value = group.id;
+    option.textContent = group.title;
+    elements.group.append(option);
+  }
+  elements.group.value = catalog.cases[0].groupId;
+  populateGroupCases();
+}
+
+function populateGroupCases() {
+  elements.select.replaceChildren();
+  for (const caseSummary of catalog.cases.filter((item) => item.groupId === elements.group.value)) {
     const option = document.createElement("option");
     option.value = caseSummary.id;
     option.textContent = caseSummary.title;
@@ -112,7 +147,29 @@ function populateCasePicker() {
 }
 
 async function loadCase(caseId) {
-  activeCase = await requestJson(`/api/cases/${encodeURIComponent(caseId)}`);
+  const version = ++caseRequestVersion;
+  elements.runButton.disabled = true;
+  let loaded;
+  try {
+    loaded = await requestJson(`/api/cases/${encodeURIComponent(caseId)}`);
+  } catch (error) {
+    if (version !== caseRequestVersion) return;
+    if (!activeCase) {
+      elements.title.textContent = "案例加载失败";
+      elements.inspector.textContent = `无法读取教学服务：${error.message}`;
+      return;
+    }
+    // 失败时回到当前展示的案例，防止下拉框标题与画布内容不一致。
+    elements.group.value = activeCase.groupId;
+    populateGroupCases();
+    elements.select.value = activeCase.id;
+    elements.runButton.disabled = activeCase.availability !== "ready";
+    elements.runMessage.textContent = `案例切换失败：${error.message}`;
+    return;
+  }
+  // 快速切换时只应用最后一次请求，较晚返回的旧请求不得覆盖新场景。
+  if (version !== caseRequestVersion) return;
+  activeCase = loaded;
   selectedId = null;
   elements.select.value = activeCase.id;
   elements.title.textContent = activeCase.title;
@@ -214,6 +271,10 @@ document.querySelectorAll("[data-layer]").forEach((control) => {
   });
 });
 
+elements.group.addEventListener("change", () => {
+  populateGroupCases();
+  loadCase(elements.select.value);
+});
 elements.select.addEventListener("change", () => loadCase(elements.select.value));
 elements.runButton.addEventListener("click", async () => {
   try {

@@ -28,12 +28,29 @@ class CaseCatalogTest(unittest.TestCase):
         self.assertEqual(len(case_ids), len(set(case_ids)))
 
     def test_ready_teaching_case_has_selectable_entities(self) -> None:
-        teaching_case = APP.find_case(self.config, "sky130-teaching-cells")
-        self.assertIsNotNone(teaching_case)
-        self.assertEqual(teaching_case["availability"], "ready")
-        self.assertGreater(len(teaching_case["entities"]), 0)
-        entity_ids = [entity["id"] for entity in teaching_case["entities"]]
-        self.assertEqual(len(entity_ids), len(set(entity_ids)))
+        for case_id, master in (("sky130-teaching-inv", "INV_X1"), ("sky130-teaching-nand2", "NAND2_X1")):
+            with self.subTest(case_id=case_id):
+                teaching_case = APP.find_case(self.config, case_id)
+                self.assertIsNotNone(teaching_case)
+                self.assertEqual(teaching_case["availability"], "ready")
+                entities = teaching_case["entities"]
+                self.assertEqual([entity["master"] for entity in entities if entity["type"] == "instance"], [master])
+                entity_ids = [entity["id"] for entity in entities]
+                self.assertEqual(len(entity_ids), len(set(entity_ids)))
+                signals = {entity["net"] for entity in entities if entity["type"] in {"instance", "route", "via"}}
+                self.assertEqual(len(signals), 1)
+
+    def test_case_groups_cover_catalog_and_separate_teaching_cells(self) -> None:
+        catalog = APP.load_case_catalog(self.config)
+        group_ids = [group["id"] for group in catalog["groups"]]
+        self.assertEqual(len(group_ids), len(set(group_ids)))
+        for case in catalog["cases"]:
+            self.assertIn(case["groupId"], group_ids)
+        for group_id in group_ids:
+            self.assertTrue(any(case["groupId"] == group_id for case in catalog["cases"]))
+        local_cases = [case for case in catalog["cases"] if case["groupId"] == "local-standard-cell-row"]
+        self.assertEqual([case["title"] for case in local_cases], ["INV", "NAND2"])
+        self.assertIsNone(APP.find_case(self.config, "sky130-teaching-cells"))
 
     def test_catalog_is_valid_json(self) -> None:
         with self.config.path("paths.case_catalog").open(encoding="utf-8") as case_file:

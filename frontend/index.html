@@ -20,7 +20,9 @@
           </div>
         </div>
         <div class="case-picker">
-          <label for="case-select">预设案例</label>
+          <label for="case-group-select">预设案例</label>
+          <select id="case-group-select" aria-label="选择案例类别"></select>
+          <span class="case-separator" aria-hidden="true">/</span>
           <select id="case-select" aria-label="选择预设案例"></select>
           <span id="source-badge" class="source-badge"></span>
         </div>
@@ -44,21 +46,23 @@
             <button type="button" data-panel="library" aria-pressed="false" aria-controls="library-section" aria-label="工艺库" title="工艺库"><span aria-hidden="true">▦</span><span class="nav-label">工艺库</span></button>
           </nav>
           <div id="sidebar-content">
-            <section id="objects-section" aria-label="对象与图层">
-              <div id="object-list" class="object-list" aria-label="对象列表"></div>
-              <div class="layer-controls">
-                <p>显示图层</p>
-                <label><input type="checkbox" data-layer="M1" checked /> M1 · 单元与电源轨</label>
-                <label><input type="checkbox" data-layer="M2" checked /> M2 · 信号走线</label>
-                <label><input type="checkbox" data-layer="VIA1" checked /> VIA1 · 层间连接</label>
-              </div>
-            </section>
-            <section id="library-section" class="library-browser" aria-label="工艺库" hidden>
-              <label for="library-pdk">已登记工艺</label>
-              <select id="library-pdk" aria-label="选择工艺库"></select>
-              <p id="library-status" aria-live="polite">正在检查工艺库…</p>
-              <div id="library-cells"></div>
-            </section>
+            <div class="sidebar-body">
+              <section id="objects-section" aria-label="对象与图层">
+                <div id="object-list" class="object-list" aria-label="对象列表"></div>
+                <div class="layer-controls">
+                  <p>显示图层</p>
+                  <label><input type="checkbox" data-layer="M1" checked /> M1 · 单元与电源轨</label>
+                  <label><input type="checkbox" data-layer="M2" checked /> M2 · 信号走线</label>
+                  <label><input type="checkbox" data-layer="VIA1" checked /> VIA1 · 层间连接</label>
+                </div>
+              </section>
+              <section id="library-section" class="library-browser" aria-label="工艺库" hidden>
+                <label for="library-pdk">已登记工艺</label>
+                <select id="library-pdk" aria-label="选择工艺库"></select>
+                <p id="library-status" aria-live="polite">正在检查工艺库…</p>
+                <div id="library-cells"></div>
+              </section>
+            </div>
           </div>
         </aside>
 
@@ -95,16 +99,23 @@
         </section>
 
         <aside class="inspector panel">
-          <div class="panel-heading"><h2 id="inspector-title">对象说明</h2></div>
-          <div id="inspector-content" class="inspector-content">
-            <p>选择二维或三维对象，查看其来源、角色和教学边界。</p>
+          <div class="panel-heading inspector-heading">
+            <h2 id="inspector-title">对象说明</h2>
+            <button id="inspector-toggle" class="icon-button" type="button" aria-expanded="true" aria-controls="inspector-body" aria-keyshortcuts="Control+l" aria-label="收起右侧边栏" title="收起右侧边栏（Ctrl+L）">›</button>
           </div>
-          <div id="library-detail" class="inspector-content" aria-live="polite" hidden></div>
-          <div class="run-card">
-            <h3>真实流程实验</h3>
-            <p>本切片仅保留受约束运行入口；ORFS 尚未接入。</p>
-            <button id="run-button" type="button">提交运行</button>
-            <p id="run-message" class="run-message" aria-live="polite"></p>
+          <div id="inspector-body">
+            <div class="inspector-inner">
+              <div id="inspector-content" class="inspector-content">
+                <p>选择二维或三维对象，查看其来源、角色和教学边界。</p>
+              </div>
+              <div id="library-detail" class="inspector-content" aria-live="polite" hidden></div>
+              <div class="run-card">
+                <h3>真实流程实验</h3>
+                <p>本切片仅保留受约束运行入口；ORFS 尚未接入。</p>
+                <button id="run-button" type="button">提交运行</button>
+                <p id="run-message" class="run-message" aria-live="polite"></p>
+              </div>
+            </div>
           </div>
         </aside>
       </section>
