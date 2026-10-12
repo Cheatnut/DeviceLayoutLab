@@ -37,6 +37,7 @@ export class TeachingScene {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.layers = new Set(["M1", "M2", "VIA1"]);
+    this.visibleEntities = new Set();
 
     const ambient = new THREE.HemisphereLight("#eaf3ff", "#8198b8", 2.2);
     const keyLight = new THREE.DirectionalLight("#ffffff", 2.5);
@@ -119,9 +120,15 @@ export class TeachingScene {
     this.applyLayerVisibility();
   }
 
+  setEntityVisibility(visibleEntities) {
+    this.visibleEntities = new Set(visibleEntities);
+    this.applyLayerVisibility();
+  }
+
   applyLayerVisibility() {
     for (const mesh of this.entityMeshes.values()) {
-      mesh.visible = this.layers.has(mesh.userData.entity.layer);
+      mesh.visible = this.layers.has(mesh.userData.entity.layer)
+        && this.visibleEntities.has(mesh.userData.entity.id);
     }
     this.render();
   }

@@ -10,11 +10,9 @@ const elements = {
   status: document.querySelector("#case-status"),
   pdk: document.querySelector("#case-pdk"),
   stage: document.querySelector("#case-stage"),
-  objectList: document.querySelector("#object-list"),
+  visibilityControls: document.querySelector("#visibility-controls"),
   layout: document.querySelector("#layout-view"),
   inspector: document.querySelector("#inspector-content"),
-  runButton: document.querySelector("#run-button"),
-  runMessage: document.querySelector("#run-message"),
 };
 
 let catalog = null;
@@ -22,6 +20,7 @@ let activeCase = null;
 let selectedId = null;
 let caseRequestVersion = 0;
 const visibleLayers = new Set();
+const visibleEntities = new Set();
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
 
 // 导航只切换展示区域，保留案例选择、图层与库资料，收起后仍能直接切换面板。
@@ -31,7 +30,7 @@ function showPanel(panel) {
   document.querySelector("#library-section").hidden = !isLibrary;
   elements.inspector.hidden = isLibrary;
   document.querySelector("#library-detail").hidden = !isLibrary;
-  document.querySelector(".run-card").hidden = isLibrary;
+  document.querySelector("#layer-controls").hidden = isLibrary;
   document.querySelector("#inspector-title").textContent = isLibrary ? "库单元说明" : "对象说明";
   document.querySelectorAll("[data-panel]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.panel === panel));
@@ -159,7 +158,6 @@ function populateGroupCases() {
 
 async function loadCase(caseId) {
   const version = ++caseRequestVersion;
-  elements.runButton.disabled = true;
   let loaded;
   try {
     loaded = await requestJson(`/api/cases/${encodeURIComponent(caseId)}`);
@@ -174,8 +172,7 @@ async function loadCase(caseId) {
     elements.group.value = activeCase.groupId;
     populateGroupCases();
     elements.select.value = activeCase.id;
-    elements.runButton.disabled = activeCase.availability !== "ready";
-    elements.runMessage.textContent = `案例切换失败：${error.message}`;
+    elements.inspector.textContent = `案例切换失败：${error.message}`;
     return;
   }
   // 快速切换时只应用最后一次请求，较晚返回的旧请求不得覆盖新场景。
@@ -190,52 +187,107 @@ async function loadCase(caseId) {
   elements.status.classList.toggle("pending", activeCase.availability !== "ready");
   elements.sourceBadge.textContent = activeCase.sourceLabel;
   elements.sourceBadge.className = `source-badge ${activeCase.sourceKind}`;
-  elements.runMessage.textContent = "";
+  renderVisibilityControls();
   renderLayerControls();
   scene.setCase(activeCase);
   scene.setLayers(visibleLayers);
-  renderObjectList();
+  scene.setEntityVisibility(visibleEntities);
   renderLayout();
   renderCaseInspector();
-  elements.runButton.disabled = activeCase.availability !== "ready";
 }
 
-function renderObjectList() {
-  elements.objectList.replaceChildren();
-  if (activeCase.entities.length === 0) {
-    elements.objectList.textContent = "该案例尚无可展示的真实对象。";
-    return;
-  }
-  activeCase.entities.filter(entity => entity.list !== false).forEach((entity) => {
-    const button = document.createElement("button");
-    button.className = `object-button ${entity.id === selectedId ? "selected" : ""}`;
-    button.type = "button";
-    button.dataset.entityId = entity.id;
+function visibilityGroups(entities) {
+  const definitions = [
+    ["P衬底", "NMOS 所在的衬底与隔离场区", entity => entity.id === "substrate" || entity.layer === "FIELD"],
+    ["N-well", "PMOS 所在的 N 型阱区", entity => entity.id === "nwell"],
+    ["P衬底接触", "把 P 衬底连接到 GND", entity => entity.id === "substrate-tap"],
+    ["N阱接触", "把 N 阱连接到 VDD", entity => entity.id === "well-tap"],
+    ["P型有源区", "PMOS 源极、漏极与沟道区域", entity => entity.id === "paa"],
+    ["N型有源区", "NMOS 源极、漏极与沟道区域", entity => entity.id === "naa"],
+    ["VDD", "正电源轨及其连接", entity => entity.layer === "M1" && entity.net === "VDD"],
+    ["GND", "接地轨及其连接", entity => entity.layer === "M1" && entity.net === "GND"],
+    ["多晶硅", "输入栅极与栅氧结构", entity => ["POLY", "OXIDE"].includes(entity.layer)],
+    ["接触孔", "连接有源区与金属层的孔", entity => entity.layer === "CONTACT"],
+    ["M1金属连线", "信号网络连线，不含 VDD 与 GND", entity => entity.layer === "M1" && !["VDD", "GND"].includes(entity.net)],
+  ];
+  return definitions.map(([name, note, matches]) => ({
+    name, note, ids: entities.filter(matches).map(entity => entity.id),
+  }));
+}
+
+function renderVisibilityControls() {
+  const controls = elements.visibilityControls;
+  controls.replaceChildren();
+  const heading = document.createElement("p");
+  heading.className = "visibility-heading";
+  heading.textContent = "显示对象";
+  controls.append(heading);
+  const entities = activeCase.entities ?? [];
+  const groups = visibilityGroups(entities);
+  visibleEntities.clear();
+  entities.forEach(entity => visibleEntities.add(entity.id));
+  for (const group of groups) {
+    const label = document.createElement("label");
+    label.className = "visibility-entry";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = group.ids.length > 0;
+    input.disabled = group.ids.length === 0;
+    input.setAttribute("aria-label", `显示${group.name}`);
+    const text = document.createElement("span");
+    text.className = "visibility-entry-text";
     const name = document.createElement("strong");
-    name.textContent = entity.name;
-    button.append(name);
-    if (entity.role && entity.role !== entity.name) {
-      const role = document.createElement("small");
-      role.textContent = entity.role;
-      button.append(role);
-    }
-    button.addEventListener("click", () => selectEntity(entity.id));
-    elements.objectList.append(button);
-  });
+    name.textContent = group.name;
+    const note = document.createElement("small");
+    note.textContent = group.note;
+    text.append(name, note);
+    label.append(input, text);
+    controls.append(label);
+    input.addEventListener("change", () => {
+      for (const id of group.ids) {
+        if (input.checked) visibleEntities.add(id);
+        else visibleEntities.delete(id);
+      }
+      scene.setEntityVisibility(visibleEntities);
+      renderLayout();
+    });
+  }
 }
 
 function renderLayout() {
-  renderTeachingViews(activeCase, selectedId, visibleLayers, selectEntity);
+  renderTeachingViews(activeCase, selectedId, visibleLayers, visibleEntities, selectEntity);
 }
 
 function renderLayerControls() {
   const controls = document.querySelector("#layer-controls");
-  const legend = document.querySelector("#material-legend");
   controls.replaceChildren();
-  legend.replaceChildren();
   visibleLayers.clear();
-  const heading = document.createElement("p");
-  heading.textContent = "材料与图层";
+  const heading = document.createElement("div");
+  heading.className = "layer-controls-heading";
+  const title = document.createElement("p");
+  title.textContent = "材料与图层";
+  const actions = document.createElement("div");
+  actions.className = "layer-control-actions";
+  for (const action of [
+    { id: "all", title: "全选图层", label: "全选图层", path: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" },
+    { id: "invert", title: "反选图层", label: "反选图层", path: "M5 5h6v6H5zM13 13h6v6h-6zM16 4l4 4m0-4-4 4M4 16l4 4m0-4-4 4" },
+  ]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tool-button layer-action";
+    button.dataset.layerAction = action.id;
+    button.title = action.title;
+    button.setAttribute("aria-label", action.label);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    shape.setAttribute("d", action.path);
+    svg.append(shape);
+    button.append(svg);
+    actions.append(button);
+  }
+  heading.append(title, actions);
   controls.append(heading);
   for (const [id, layer] of Object.entries(activeCase.teaching?.layers ?? {})) {
     visibleLayers.add(id);
@@ -245,20 +297,14 @@ function renderLayerControls() {
     input.checked = true;
     input.dataset.layer = id;
     label.className = "layer-entry";
+    const swatch = document.createElement("i");
+    swatch.className = "material-swatch";
+    swatch.style.background = layer.color;
     const name = document.createElement("span");
     name.className = "layer-entry-name";
-    name.append(input, document.createTextNode(layer.name));
-    const swatch = document.createElement("i");
-    swatch.className = "layer-color-strip";
-    swatch.style.background = layer.color;
-    label.append(name, swatch);
+    name.append(input, swatch, document.createTextNode(layer.name));
+    label.append(name);
     controls.append(label);
-    const chip = document.createElement("span");
-    const legendSwatch = document.createElement("i");
-    legendSwatch.className = "material-swatch";
-    legendSwatch.style.background = layer.color;
-    chip.append(legendSwatch, document.createTextNode(layer.name));
-    legend.append(chip);
     input.addEventListener("change", () => {
       if (input.checked) visibleLayers.add(id);
       else visibleLayers.delete(id);
@@ -266,13 +312,24 @@ function renderLayerControls() {
       renderLayout();
     });
   }
+  actions.addEventListener("click", event => {
+    const button = event.target.closest("[data-layer-action]");
+    if (!button) return;
+    const inputs = [...controls.querySelectorAll("input[data-layer]")];
+    for (const input of inputs) {
+      input.checked = button.dataset.layerAction === "all" ? true : !input.checked;
+      if (input.checked) visibleLayers.add(input.dataset.layer);
+      else visibleLayers.delete(input.dataset.layer);
+    }
+    scene.setLayers(visibleLayers);
+    renderLayout();
+  });
 }
 
 function selectEntity(entityId) {
   showPanel("objects");
   selectedId = entityId;
   scene.setSelection(entityId);
-  renderObjectList();
   renderLayout();
   const entity = activeCase.entities.find((item) => item.id === entityId);
   if (!entity) return;
@@ -299,15 +356,6 @@ elements.group.addEventListener("change", () => {
   loadCase(elements.select.value);
 });
 elements.select.addEventListener("change", () => loadCase(elements.select.value));
-elements.runButton.addEventListener("click", async () => {
-  try {
-    const result = await requestJson("/api/runs", "POST");
-    elements.runMessage.textContent = result.message ?? "运行请求未完成。";
-  } catch (error) {
-    elements.runMessage.textContent = error.message;
-  }
-});
-
 /**
  * 运行期只访问同源教学服务。这里使用 XMLHttpRequest，避免将案例加载
  * 绑定到某个浏览器的 Fetch 支持细节；真实 ORFS 请求仍由后端受约束处理。

@@ -95,19 +95,28 @@ select:hover { border-color: #93b7ed; }
 .sidebar-body { width: calc(var(--sidebar-width) - 2px); }
 .inspector-inner { width: calc(var(--inspector-width) - 2px); }
 .sidebar-collapsed #sidebar-content, .inspector-collapsed #inspector-body { grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows var(--panel-duration) var(--panel-ease), opacity 130ms ease, visibility 0s var(--panel-duration); }
-.object-list { padding: 10px; }
+.visibility-controls { padding: 10px 12px 18px; }
+.visibility-heading { margin: 4px 4px 8px; color: var(--ink); font-size: .76rem; font-weight: 650; }
+.visibility-entry { display: grid; grid-template-columns: 15px minmax(0, 1fr); align-items: start; gap: 10px; padding: 8px 5px; border-bottom: 1px solid rgb(220 230 243 / 65%); cursor: pointer; }
+.visibility-entry-text { display: grid; gap: 2px; min-width: 0; }
+.visibility-entry-text strong { color: #17263a; font-family: "Microsoft YaHei", "Segoe UI", sans-serif; font-size: .76rem; font-weight: 650; line-height: 1.35; }
+.visibility-entry-text small { color: var(--muted); font-size: .62rem; line-height: 1.4; }
 .object-button { width: 100%; display: grid; gap: 5px; border: 1px solid transparent; border-radius: 0; background: transparent; color: #344962; text-align: left; padding: 11px 13px; line-height: 1.45; overflow-wrap: anywhere; }
 .object-button strong { font-size: .8rem; font-weight: 600; }
 .object-button small { color: var(--muted); font-size: .7rem; }
 .object-button:hover { background: #f1f6ff; border-color: #e0ebfa; }
 .object-button.selected { background: #e7f1ff; border-color: transparent; color: #205eb9; box-shadow: inset 3px 0 0 #3479ed; }
-.layer-controls { margin: 8px 18px 18px; padding-top: 19px; border-top: 1px solid var(--line); color: var(--muted); font-size: .73rem; }
-.layer-controls p { margin-bottom: 14px; color: var(--ink); font-weight: 600; }
-.layer-controls label { margin-block: 10px; cursor: pointer; }
-.layer-entry { display: grid; gap: 5px; }
-.layer-entry-name { display: flex; align-items: center; gap: 8px; min-height: 18px; }
-.layer-color-strip { display: block; height: 7px; margin-left: 22px; border: 1px solid rgb(35 59 88 / 15%); }
-input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; margin: 0; flex-shrink: 0; cursor: pointer; }
+.layer-controls { margin: 4px 14px 18px; padding: 16px 4px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .73rem; }
+.layer-controls-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 0 0 9px; }
+.layer-controls-heading p { margin: 0; color: var(--ink); font-size: .76rem; font-weight: 650; }
+.layer-control-actions { display: flex; gap: 2px; }
+.layer-action { width: 28px; height: 28px; padding: 5px; }
+.layer-controls label { display: block; margin-block: 5px; cursor: pointer; }
+.layer-entry-name { display: flex; align-items: center; gap: 8px; min-height: 24px; color: #344962; font-size: .7rem; }
+input[type="checkbox"] { appearance: none; display: inline-grid; place-items: center; width: 14px; height: 14px; margin: 0; flex: 0 0 14px; border: 1.5px solid #a9b8ca; border-radius: 3px; background: #fff; cursor: pointer; }
+input[type="checkbox"]:checked { border-color: #2873df; background: #2873df; }
+input[type="checkbox"]:disabled { opacity: .4; cursor: not-allowed; }
+input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offset: 2px; }
 
 .view-grid { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .view-panel { overflow: hidden; }
@@ -129,10 +138,7 @@ input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; m
 .logic-banner strong { color: #2d527c; font-size: 1.05rem; letter-spacing: .035em; }
 .logic-banner span { font-size: .76rem; color: #607a98; }
 .logic-banner small { font-size: .65rem; color: #8091a6; margin-left: auto; }
-.material-legend { display: flex; flex-wrap: wrap; gap: 9px 15px; padding: 2px 4px 8px; font-size: .67rem; color: var(--muted); }
-.material-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .material-swatch { display: inline-block; width: 11px; height: 11px; flex-shrink: 0; border: 1px solid rgb(35 59 88 / 15%); }
-.object-list { max-height: 410px; overflow-y: auto; scrollbar-width: thin; }
 .layout-grid { stroke: #dce7f6; stroke-width: .35; }
 .layout-row { fill: #eaf1fb; stroke: #b9cde7; stroke-width: .6; }
 .layout-entity { cursor: pointer; stroke: #f6faff; stroke-width: 1.2; transition: opacity .15s; }
@@ -164,14 +170,6 @@ input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; m
 .metadata div { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; }
 .metadata dt { color: var(--muted); }
 .metadata dd { margin: 0; color: #355371; overflow-wrap: anywhere; }
-.run-card { margin: 0 16px 18px; padding: 18px; border: 1px solid #dde9fa; border-radius: 17px; background: linear-gradient(140deg, #f6faff, #eef5ff); color: var(--muted); font-size: .75rem; line-height: 1.7; }
-.run-card h3 { color: #365f95; font-size: .8rem; font-weight: 600; margin-bottom: 8px; }
-.run-card button { width: 100%; border: 1px solid transparent; border-radius: 999px; padding: 11px 15px; background: linear-gradient(110deg, #397eec, #2468e8); color: white; box-shadow: 0 4px 10px rgb(36 104 232 / 14%); font-size: .76rem; font-weight: 600; }
-.run-card button:hover:not(:disabled) { background: #205ed4; box-shadow: 0 5px 15px rgb(36 104 232 / 23%); }
-.run-card button:disabled { background: #e5ebf3; color: #73829a; box-shadow: none; cursor: not-allowed; }
-.run-message { margin: 10px 0 0; color: #8c6323; overflow-wrap: anywhere; }
-.run-message:empty { margin: 0; }
-
 .library-browser { padding: 18px 12px; }
 .library-browser label, #library-status { font-size: .76rem; color: var(--muted); }
 .library-browser select { display: block; width: 100%; min-width: 0; margin: 12px 0; font-size: .75rem; }
@@ -201,7 +199,6 @@ input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; m
   .app-shell { padding-inline: 12px; }
   .workspace { --sidebar-width: 174px; --inspector-width: 230px; gap: 12px; }
   .inspector-content { padding: 14px; }
-  .run-card { margin: 0 10px 14px; padding: 14px; }
   .case-picker > label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {

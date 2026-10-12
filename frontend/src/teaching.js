@@ -28,13 +28,12 @@ function darken(color) {
   return `#${channel(color.slice(1,3))}${channel(color.slice(3,5))}${channel(color.slice(5,7))}`;
 }
 
-function layout(svg, data, selected, layers, pick) {
+function layout(svg, data, selected, layers, visibleEntities, pick) {
   const s = data.teaching;
   for (const entity of data.entities) {
-    if (entity.planar === false || !layers.has(entity.layer)) continue;
+    if (entity.planar === false || !layers.has(entity.layer) || !visibleEntities.has(entity.id)) continue;
     const g = selectable(svg, entity.id, selected, pick);
     g.setAttribute("aria-label", entity.name);
-    const area = ["PAA", "NAA"].includes(entity.layer);
     const region = ["SUBSTRATE", "NWELL", "FIELD"].includes(entity.layer);
     for (const [x, y, width, height] of entity.rects) {
       node(g, "rect", { x, y, width, height, fill: entity.color,
@@ -45,45 +44,52 @@ function layout(svg, data, selected, layers, pick) {
       }
     }
   }
-  if (layers.has("NWELL")) text(svg, s.well[0]+s.well[2]-8, s.well[1]+s.well[3]-9, s.layers.NWELL.name, { "text-anchor": "end" });
-  if (layers.has("SUBSTRATE")) text(svg, 370, 312, "P 衬底", { "text-anchor": "end" });
-  for (const active of s.active) if (layers.has(active.layer)) text(svg, active.rect[0], active.rect[1]-8, active.id.toUpperCase());
-  pins(svg, s, layers);
+  if (layers.has("NWELL") && visibleEntities.has("nwell")) text(svg, s.well[0]+s.well[2]-8, s.well[1]+s.well[3]-9, s.layers.NWELL.name, { "text-anchor": "end" });
+  if (layers.has("SUBSTRATE") && visibleEntities.has("substrate")) text(svg, 370, 312, "P 衬底", { "text-anchor": "end" });
+  for (const active of s.active) if (layers.has(active.layer) && visibleEntities.has(active.id)) text(svg, active.rect[0], active.rect[1]-8, active.id.toUpperCase());
+  pins(svg, s, layers, visibleEntities);
 }
 
-function pins(svg, s, layers = null) {
+function pins(svg, s, layers = null, visibleEntities = null) {
   if (!layers || layers.has("M1")) {
-    text(svg, s.rails.VDD[0][0], s.rails.VDD[0][1]-12, "VDD");
-    text(svg, s.rails.GND[0][0], s.rails.GND[0][1]+22, "GND");
-    const out = s.wires.Y.at(-1).at(-1);
-    text(svg, out[0]+9, out[1]+5, "Y");
+    if (!visibleEntities || visibleEntities.has("metal-VDD")) text(svg, s.rails.VDD[0][0], s.rails.VDD[0][1]-12, "VDD");
+    if (!visibleEntities || visibleEntities.has("metal-GND")) text(svg, s.rails.GND[0][0], s.rails.GND[0][1]+22, "GND");
+    if (!visibleEntities || visibleEntities.has("metal-Y")) {
+      const out = s.wires.Y.at(-1).at(-1);
+      text(svg, out[0]+9, out[1]+5, "Y");
+    }
   }
-  if (!layers || layers.has("POLY")) for (const gate of s.gates) text(svg, gate.x, gate.top-10, gate.net, { "text-anchor": "middle" });
+  if (!layers || layers.has("POLY")) for (const gate of s.gates) {
+    if (visibleEntities && !visibleEntities.has(gate.id)) continue;
+    text(svg, gate.x, gate.top-10, gate.net, { "text-anchor": "middle" });
+  }
 }
 
-function sticks(svg, data, selected, layers, pick) {
+function sticks(svg, data, selected, layers, visibleEntities, pick) {
   const s = data.teaching;
-  if (layers.has("NWELL")) node(svg, "rect", { x:s.well[0], y:s.well[1], width:s.well[2], height:s.well[3], fill:"none", stroke:s.layers.NWELL.color, "stroke-dasharray":"5 4" });
+  if (layers.has("NWELL") && visibleEntities.has("nwell")) node(svg, "rect", { x:s.well[0], y:s.well[1], width:s.well[2], height:s.well[3], fill:"none", stroke:s.layers.NWELL.color, "stroke-dasharray":"5 4" });
   for (const active of [...s.active, ...s.taps]) {
-    if (!layers.has(active.layer)) continue;
+    if (!layers.has(active.layer) || !visibleEntities.has(active.id)) continue;
     const [x,y,w,h] = active.rect;
     const g = selectable(svg, active.id, selected, pick);
     line(g, [[x,y+h/2],[x+w,y+h/2]], s.layers[active.layer].color, s.render.stickStroke);
     text(svg, x, y-3, active.id.toUpperCase(), { "font-size":11 });
   }
   if (layers.has("POLY")) for (const gate of s.gates) {
+    if (!visibleEntities.has(gate.id)) continue;
     const g = selectable(svg, gate.id, selected, pick);
     line(g, [[gate.x,gate.top],[gate.x,gate.bottom]], s.layers.POLY.color, s.render.stickStroke);
   }
-  if (layers.has("M1")) for (const entity of data.entities.filter(e => e.paths)) {
+  if (layers.has("M1")) for (const entity of data.entities.filter(e => e.paths && visibleEntities.has(e.id))) {
     const g = selectable(svg, entity.id, selected, pick);
     for (const path of entity.paths) line(g, path, entity.color, s.render.stickStroke);
   }
   if (layers.has("CONTACT")) for (const [net, points] of Object.entries(s.contacts)) {
+    if (!visibleEntities.has(`contact-${net}`)) continue;
     const g = selectable(svg, `contact-${net}`, selected, pick);
     for (const [x,y] of points) node(g,"rect",{x:x-3.5,y:y-3.5,width:7,height:7,fill:s.layers.CONTACT.color});
   }
-  pins(svg,s,layers);
+  pins(svg,s,layers,visibleEntities);
 }
 
 /** 三端简化 MOS 符号：PMOS 栅端带圆圈，体端连接在卡片说明和对象面板中注明。 */
@@ -162,7 +168,7 @@ function standardCircuit(svg,data,selected,pick) {
   }
 }
 
-export function renderTeachingViews(data, selected, layers, pick) {
+export function renderTeachingViews(data, selected, layers, visibleEntities, pick) {
   activeEntities = new Map((data.entities ?? []).map(entity => [entity.id, entity]));
   const ids=["layout-view","stick-view","positional-view","circuit-view"];
   for(const id of ids) {
@@ -175,8 +181,8 @@ export function renderTeachingViews(data, selected, layers, pick) {
   document.getElementById("logic-formula").textContent=data.teaching?.formula ?? "等待案例数据";
   document.getElementById("logic-note").textContent=data.teaching?.logicNote ?? "";
   if(!data.teaching) return;
-  layout(document.getElementById(ids[0]),data,selected,layers,pick);
-  sticks(document.getElementById(ids[1]),data,selected,layers,pick);
+  layout(document.getElementById(ids[0]),data,selected,layers,visibleEntities,pick);
+  sticks(document.getElementById(ids[1]),data,selected,layers,visibleEntities,pick);
   positionalCircuit(document.getElementById(ids[2]),data,selected,pick);
   standardCircuit(document.getElementById(ids[3]),data,selected,pick);
 }

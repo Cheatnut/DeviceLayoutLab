@@ -42,14 +42,13 @@
             <button id="sidebar-toggle" class="icon-button" type="button" aria-expanded="true" aria-controls="sidebar-content" aria-keyshortcuts="Control+b" aria-label="收起左侧边栏" title="收起左侧边栏（Ctrl+B）">‹</button>
           </div>
           <nav class="sidebar-nav" aria-label="选择面板">
-            <button type="button" data-panel="objects" aria-pressed="true" aria-controls="objects-section" aria-label="对象与图层" title="对象与图层"><span aria-hidden="true">▱</span><span class="nav-label">对象与图层</span></button>
+            <button type="button" data-panel="objects" aria-pressed="true" aria-controls="objects-section" aria-label="显示对象" title="显示对象"><span aria-hidden="true">▱</span><span class="nav-label">显示对象</span></button>
             <button type="button" data-panel="library" aria-pressed="false" aria-controls="library-section" aria-label="工艺库" title="工艺库"><span aria-hidden="true">▦</span><span class="nav-label">工艺库</span></button>
           </nav>
           <div id="sidebar-content">
             <div class="sidebar-body">
-              <section id="objects-section" aria-label="对象与图层">
-                <div id="object-list" class="object-list" aria-label="对象列表"></div>
-                <div id="layer-controls" class="layer-controls"></div>
+              <section id="objects-section" aria-label="显示对象">
+                <div id="visibility-controls" class="visibility-controls" aria-label="对象可见性"></div>
               </section>
               <section id="library-section" class="library-browser" aria-label="工艺库" hidden>
                 <label for="library-pdk">已登记工艺</label>
@@ -67,7 +66,7 @@
             <article class="view-panel panel" id="layout-panel">
               <div class="panel-heading"><h2><b class="step-number">01</b> 单元版图</h2><button class="tool-button diagram-text-toggle" type="button" data-diagram-text="layout-view" aria-pressed="true" aria-label="隐藏单元版图文字" title="隐藏文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8" /></svg></button></div>
               <svg id="layout-view" class="teaching-diagram" role="img" aria-label="教学 CMOS 单元版图"></svg>
-              <p class="diagram-caption">颜色对应左侧图层；选择色块可查看对象说明</p>
+              <p class="diagram-caption">颜色对应对象材料；选择对象查看说明</p>
             </article>
             <article class="view-panel panel">
               <div class="panel-heading"><h2><b class="step-number">02</b> 棍图</h2><button class="tool-button diagram-text-toggle" type="button" data-diagram-text="stick-view" aria-pressed="true" aria-label="隐藏棍图文字" title="隐藏文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8" /></svg></button></div>
@@ -85,8 +84,6 @@
               <p class="diagram-caption">简化三端符号：PMOS 体接 VDD，NMOS 体接 GND</p>
             </article>
           </section>
-          <div id="material-legend" class="material-legend" aria-label="材料颜色图例"></div>
-
           <article class="view-panel panel" id="model-panel">
             <div class="panel-heading">
               <h2>三维教学结构</h2>
@@ -121,12 +118,7 @@
                 <p>选择二维或三维对象，查看其来源、角色和教学边界。</p>
               </div>
               <div id="library-detail" class="inspector-content" aria-live="polite" hidden></div>
-              <div class="run-card">
-                <h3>真实流程实验</h3>
-                <p>本切片仅保留受约束运行入口；ORFS 尚未接入。</p>
-                <button id="run-button" type="button">提交运行</button>
-                <p id="run-message" class="run-message" aria-live="polite"></p>
-              </div>
+              <div id="layer-controls" class="layer-controls" aria-label="材料与工艺图层"></div>
             </div>
           </div>
         </aside>
