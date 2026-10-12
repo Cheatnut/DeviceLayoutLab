@@ -108,10 +108,18 @@ function positionalCircuit(svg, data, selected, pick) {
   for(const gate of s.gates) {
     const p=s.devices.find(d=>d.gate===gate.net && d.type==="pmos");
     const n=s.devices.find(d=>d.gate===gate.net && d.type==="nmos");
-    const crossing=s.wires.Y.at(-1)[0][1];
-    // 跳线弧明确表示栅线与输出线交叉但不相接。
-    node(svg,"path",{d:`M${gate.x} ${p.at[1]+34} V${crossing-5} a5 5 0 0 1 0 10 V${n.at[1]-34}`,fill:"none",stroke:s.layers.POLY.color,"stroke-width":2});
-    text(svg,gate.x+9,crossing+27,gate.net);
+    const crossings=new Set();
+    for(const paths of Object.values(s.wires)) for(const path of paths) for(let i=1;i<path.length;i++) {
+      const [a,b]=[path[i-1],path[i]];
+      if(a[1]===b[1] && Math.min(a[0],b[0])<gate.x && Math.max(a[0],b[0])>gate.x
+        && a[1]>p.at[1]+39 && a[1]<n.at[1]-39) crossings.add(a[1]);
+    }
+    // 只在实际交叉处画跳线弧，INV 无交叉的输入线保持直线。
+    let gatePath=`M${gate.x} ${p.at[1]+34}`;
+    for(const crossing of [...crossings].sort((a,b)=>a-b)) gatePath+=` V${crossing-5} a5 5 0 0 1 0 10`;
+    gatePath+=` V${n.at[1]-34}`;
+    node(svg,"path",{d:gatePath,fill:"none",stroke:s.layers.POLY.color,"stroke-width":2});
+    text(svg,gate.x+9,(p.at[1]+n.at[1])/2+23,gate.net);
   }
   for(const d of s.devices) {
     mos(svg,d,d.at,d.type==="pmos"?-90:90,selected,pick,ink);

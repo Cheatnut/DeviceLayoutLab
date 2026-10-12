@@ -88,7 +88,7 @@ export function bindMiddleOrbit(canvas, camera, render, {
   };
 }
 
-/** 按真实场景包围球和画布横纵视角取景，网格、坐标和文本不参与范围计算。 */
+/** 按固定观察方向下的包围盒角点取景，扁平版图也能充分利用画布。 */
 export function frameCameraToBounds(camera, bounds, target) {
   const sphere = bounds.isEmpty()
     ? new THREE.Sphere(new THREE.Vector3(), 1)
@@ -97,8 +97,20 @@ export function frameCameraToBounds(camera, bounds, target) {
   target.copy(sphere.center);
   const vertical = THREE.MathUtils.degToRad(camera.fov) / 2;
   const horizontal = Math.atan(Math.tan(vertical) * camera.aspect);
-  const distance = radius / Math.sin(Math.min(vertical, horizontal)) * 1.15;
-  camera.position.copy(target).add(new THREE.Vector3(9, 8, 13).normalize().multiplyScalar(distance));
+  const direction = new THREE.Vector3(9, 8, 13).normalize();
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), direction).normalize();
+  const up = new THREE.Vector3().crossVectors(direction, right);
+  let fitDistance = bounds.isEmpty() ? radius / Math.sin(Math.min(vertical, horizontal)) : radius;
+  if (!bounds.isEmpty()) {
+    for (const x of [bounds.min.x, bounds.max.x]) for (const y of [bounds.min.y, bounds.max.y]) for (const z of [bounds.min.z, bounds.max.z]) {
+      const corner = new THREE.Vector3(x, y, z).sub(target);
+      fitDistance = Math.max(fitDistance,
+        Math.abs(corner.dot(right)) / Math.tan(horizontal) + corner.dot(direction),
+        Math.abs(corner.dot(up)) / Math.tan(vertical) + corner.dot(direction));
+    }
+  }
+  const distance = fitDistance * 1.15;
+  camera.position.copy(target).add(direction.multiplyScalar(distance));
   camera.near = radius / 1000;
   camera.far = distance * 100;
   camera.lookAt(target);

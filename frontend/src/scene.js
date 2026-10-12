@@ -30,6 +30,9 @@ export class TeachingScene {
     this.labelOverlay.className = "model-labels";
     this.labelOverlay.setAttribute("aria-hidden", "true");
     this.container.append(this.labelOverlay);
+    this.labelLeaders = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    this.labelLeaders.classList.add("model-label-leaders");
+    this.labelOverlay.append(this.labelLeaders);
     this.selectedId = null;
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -79,7 +82,7 @@ export class TeachingScene {
       const label = document.createElement("span");
       label.className = "model-label";
       label.textContent = entity.name;
-      label.dataset.defaultVisible = String(entity.list !== false && !["FIELD", "CONTACT"].includes(entity.layer));
+      label.dataset.defaultVisible = String(entity.list !== false && ["SUBSTRATE", "NWELL", "POLY", "M1"].includes(entity.layer));
       this.labelOverlay.append(label);
       this.labels.set(entity.id, label);
     });
@@ -176,27 +179,43 @@ export class TeachingScene {
 
   updateLabels() {
     const { width, height } = this.container.getBoundingClientRect();
-    const placed = [];
-    const point = new THREE.Vector3();
-    const positionLabel = (label, position, visible) => {
-      point.copy(position).project(this.camera);
-      label.hidden = !visible || point.z < -1 || point.z > 1 || Math.abs(point.x) > 1 || Math.abs(point.y) > 1;
-      if (label.hidden) return;
-      const labelWidth = label.offsetWidth;
-      const x = THREE.MathUtils.clamp((point.x + 1) * width / 2 - labelWidth / 2, 4, Math.max(4, width - labelWidth - 4));
-      let y = Math.max(4, (1 - point.y) * height / 2 - 22);
-      // 标注只在屏幕空间错开，不移动实体；图层隐藏时相应标注同步隐藏。
-      while (y > 20 && placed.some((box) => x < box.right && x + labelWidth > box.left && Math.abs(y - box.y) < 18)) y -= 18;
-      placed.push({ left: x, right: x + labelWidth, y });
-      label.style.transform = `translate(${x}px, ${y}px)`;
-    };
+    this.labelLeaders.replaceChildren();
+    this.labelLeaders.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const lanes = [[], []];
     for (const [id, mesh] of this.entityMeshes) {
-      const bounds = new THREE.Box3().setFromObject(mesh);
-      const anchor = bounds.getCenter(new THREE.Vector3());
-      anchor.y = bounds.max.y;
       const label = this.labels.get(id);
-      positionLabel(label, anchor, this.labelsVisible && mesh.visible && (label.dataset.defaultVisible === "true" || id === this.selectedId));
+      const bounds = new THREE.Box3().setFromObject(mesh);
+      const point = bounds.getCenter(new THREE.Vector3());
+      point.y = bounds.max.y;
+      point.project(this.camera);
+      const visible = this.labelsVisible && mesh.visible && (label.dataset.defaultVisible === "true" || id === this.selectedId)
+        && point.z >= -1 && point.z <= 1 && Math.abs(point.x) <= 1 && Math.abs(point.y) <= 1;
+      label.hidden = !visible;
+      if (!visible) continue;
+      const x = (point.x + 1) * width / 2;
+      const y = (1 - point.y) * height / 2;
+      lanes[x < width / 2 ? 0 : 1].push({ label, x, y, id });
     }
+    // 将标注分布在画布两侧，并用引线标出实体位置，避免文字漂离对象而无法对应。
+    lanes.forEach((lane, side) => {
+      lane.sort((a, b) => a.y - b.y);
+      let last = 12;
+      for (const item of lane) {
+        item.labelY = Math.max(last, item.y - 8);
+        last = item.labelY + 23;
+      }
+      const overflow = Math.max(0, last - height + 12);
+      for (const item of lane) {
+        const x = side === 0 ? 12 : width - item.label.offsetWidth - 12;
+        const y = Math.max(8, item.labelY - overflow);
+        item.label.style.transform = `translate(${x}px, ${y}px)`;
+        const end = side === 0 ? x + item.label.offsetWidth + 3 : x - 3;
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${item.x} ${item.y} L ${end} ${y + 8}`);
+        path.classList.toggle("selected", item.id === this.selectedId);
+        this.labelLeaders.append(path);
+      }
+    });
   }
 
   render() {
