@@ -72,10 +72,10 @@ function toggleSidebar() {
 document.querySelector("#sidebar-toggle").addEventListener("click", toggleSidebar);
 document.querySelector("#inspector-toggle").addEventListener("click", toggleInspector);
 
-// 固定页面时先把三维区域移入视野，再锁住文档滚动；工具栏始终可用于解除固定。
+// 固定页面只把画布滚轮切换为缩放，并锁住文档滚动；不改变工作台布局或侧栏位置。
 let pagePinned = false;
 function setPagePinned(pinned) {
-  if (pinned) document.querySelector("#model-panel").scrollIntoView({ block: "center", behavior: "instant" });
+  // 固定只改变滚轮用途，不移动整页视口，侧栏因此始终留在原来的屏幕位置。
   pagePinned = pinned;
   document.documentElement.classList.toggle("page-pinned", pinned);
   scene.setZoomEnabled(pinned);
@@ -95,6 +95,16 @@ for (const [id, option] of [["model-grid", "grid"], ["model-labels", "labels"]])
     const visible = button.getAttribute("aria-pressed") !== "true";
     button.setAttribute("aria-pressed", String(visible));
     scene.setDisplay(option, visible);
+  });
+}
+for (const button of document.querySelectorAll("[data-diagram-text]")) {
+  button.addEventListener("click", () => {
+    const svg = document.getElementById(button.dataset.diagramText);
+    const visible = button.getAttribute("aria-pressed") !== "true";
+    button.setAttribute("aria-pressed", String(visible));
+    button.setAttribute("aria-label", `${visible ? "隐藏" : "显示"}${button.dataset.diagramText === "layout-view" ? "单元版图" : button.dataset.diagramText === "stick-view" ? "棍图" : button.dataset.diagramText === "positional-view" ? "位置对应电路" : "整理后电路"}文字`);
+    button.title = `${visible ? "隐藏" : "显示"}文字`;
+    svg.classList.toggle("text-hidden", !visible);
   });
 }
 document.addEventListener("keydown", (event) => {
@@ -201,7 +211,14 @@ function renderObjectList() {
     button.className = `object-button ${entity.id === selectedId ? "selected" : ""}`;
     button.type = "button";
     button.dataset.entityId = entity.id;
-    button.innerHTML = `<strong>${entity.name}</strong><small>${entity.role} · ${entity.layer}</small>`;
+    const name = document.createElement("strong");
+    name.textContent = entity.name;
+    button.append(name);
+    if (entity.role && entity.role !== entity.name) {
+      const role = document.createElement("small");
+      role.textContent = entity.role;
+      button.append(role);
+    }
     button.addEventListener("click", () => selectEntity(entity.id));
     elements.objectList.append(button);
   });
@@ -227,13 +244,20 @@ function renderLayerControls() {
     input.type = "checkbox";
     input.checked = true;
     input.dataset.layer = id;
+    label.className = "layer-entry";
+    const name = document.createElement("span");
+    name.className = "layer-entry-name";
+    name.append(input, document.createTextNode(layer.name));
     const swatch = document.createElement("i");
-    swatch.className = "material-swatch";
+    swatch.className = "layer-color-strip";
     swatch.style.background = layer.color;
-    label.append(input, swatch, document.createTextNode(layer.name));
+    label.append(name, swatch);
     controls.append(label);
     const chip = document.createElement("span");
-    chip.append(swatch.cloneNode(), document.createTextNode(layer.name));
+    const legendSwatch = document.createElement("i");
+    legendSwatch.className = "material-swatch";
+    legendSwatch.style.background = layer.color;
+    chip.append(legendSwatch, document.createTextNode(layer.name));
     legend.append(chip);
     input.addEventListener("change", () => {
       if (input.checked) visibleLayers.add(id);

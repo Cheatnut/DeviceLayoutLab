@@ -1,5 +1,6 @@
 /** 四种二维表达共享案例几何与 MOS 拓扑；绘图不修改器件连接。 */
 const NS = "http://www.w3.org/2000/svg";
+let activeEntities = new Map();
 function node(parent, tag, attrs = {}, text = null) {
   const element = document.createElementNS(NS, tag);
   for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
@@ -14,10 +15,17 @@ function text(parent, x, y, value, extra = {}) {
   return node(parent, "text", { x, y, class: "diagram-text", ...extra }, value);
 }
 function selectable(parent, id, selected, pick) {
-  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${id === selected ? "is-selected" : ""}`, tabindex: 0, role: "button" });
+  const entity = activeEntities.get(id);
+  const color = entity?.color ?? "#536179";
+  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${id === selected ? "is-selected" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button" });
   group.addEventListener("click", () => pick(id));
   group.addEventListener("keydown", e => { if (["Enter", " "].includes(e.key)) { e.preventDefault(); pick(id); } });
   return group;
+}
+function darken(color) {
+  // 选中框保留对象色相，只降低明度；颜色来源始终是当前案例的材料色表。
+  const channel = value => Math.max(0, Math.round(Number.parseInt(value, 16) * 0.58)).toString(16).padStart(2, "0");
+  return `#${channel(color.slice(1,3))}${channel(color.slice(3,5))}${channel(color.slice(5,7))}`;
 }
 
 function layout(svg, data, selected, layers, pick) {
@@ -29,18 +37,17 @@ function layout(svg, data, selected, layers, pick) {
     const area = ["PAA", "NAA"].includes(entity.layer);
     const region = ["SUBSTRATE", "NWELL", "FIELD"].includes(entity.layer);
     for (const [x, y, width, height] of entity.rects) {
-      node(g, "rect", { x, y, width, height, fill: entity.layer === "FIELD" ? "none" : entity.color,
-        "fill-opacity": region ? .25 : .93, stroke: s.boundaryColor, "stroke-width": area ? 1.2 : .7,
-        "stroke-dasharray": entity.layer === "FIELD" ? "5 4" : "none" });
+      node(g, "rect", { x, y, width, height, fill: entity.color,
+        "fill-opacity": region ? .25 : .93, stroke: "none" });
       if (entity.layer === "CONTACT") {
         line(g, [[x+2,y+2],[x+width-2,y+height-2]], "#edf1f4", 1);
         line(g, [[x+width-2,y+2],[x+2,y+height-2]], "#edf1f4", 1);
       }
     }
   }
-  if (layers.has("NWELL")) text(svg, s.well[0]+s.well[2]-8, s.well[1]+s.well[3]-9, "N-well", { "text-anchor": "end" });
+  if (layers.has("NWELL")) text(svg, s.well[0]+s.well[2]-8, s.well[1]+s.well[3]-9, s.layers.NWELL.name, { "text-anchor": "end" });
   if (layers.has("SUBSTRATE")) text(svg, 370, 312, "P 衬底", { "text-anchor": "end" });
-  for (const active of s.active) if (layers.has(active.layer)) text(svg, active.rect[0], active.rect[1]-8, active.name);
+  for (const active of s.active) if (layers.has(active.layer)) text(svg, active.rect[0], active.rect[1]-8, active.id.toUpperCase());
   pins(svg, s, layers);
 }
 
@@ -62,7 +69,7 @@ function sticks(svg, data, selected, layers, pick) {
     const [x,y,w,h] = active.rect;
     const g = selectable(svg, active.id, selected, pick);
     line(g, [[x,y+h/2],[x+w,y+h/2]], s.layers[active.layer].color, s.render.stickStroke);
-    text(svg, x, y-3, active.name, { "font-size":11 });
+    text(svg, x, y-3, active.id.toUpperCase(), { "font-size":11 });
   }
   if (layers.has("POLY")) for (const gate of s.gates) {
     const g = selectable(svg, gate.id, selected, pick);
@@ -156,11 +163,13 @@ function standardCircuit(svg,data,selected,pick) {
 }
 
 export function renderTeachingViews(data, selected, layers, pick) {
+  activeEntities = new Map((data.entities ?? []).map(entity => [entity.id, entity]));
   const ids=["layout-view","stick-view","positional-view","circuit-view"];
   for(const id of ids) {
     const svg=document.getElementById(id);
     svg.replaceChildren();
     svg.setAttribute("viewBox",(data.teaching?.viewBox ?? [0,0,420,330]).join(" "));
+    svg.classList.toggle("text-hidden", document.querySelector(`[data-diagram-text="${id}"]`)?.getAttribute("aria-pressed") === "false");
     if(!data.teaching) text(svg,210,165,"此案例暂无版图数据",{"text-anchor":"middle"});
   }
   document.getElementById("logic-formula").textContent=data.teaching?.formula ?? "等待案例数据";

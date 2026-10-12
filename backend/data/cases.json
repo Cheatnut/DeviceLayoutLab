@@ -35,7 +35,7 @@
         "active": [
           {
             "id": "paa",
-            "name": "PAA",
+            "name": "P 型有源区",
             "layer": "PAA",
             "rect": [
               112,
@@ -46,7 +46,7 @@
           },
           {
             "id": "naa",
-            "name": "NAA",
+            "name": "N 型有源区",
             "layer": "NAA",
             "rect": [
               112,
@@ -337,7 +337,7 @@
         "active": [
           {
             "id": "paa",
-            "name": "PAA",
+            "name": "P 型有源区",
             "layer": "PAA",
             "rect": [
               112,
@@ -348,7 +348,7 @@
           },
           {
             "id": "naa",
-            "name": "NAA",
+            "name": "N 型有源区",
             "layer": "NAA",
             "rect": [
               112,
@@ -758,7 +758,7 @@
         "opacity": 0.5
       },
       "NWELL": {
-        "name": "N-well",
+        "name": "N 阱",
         "color": "#b1a9c4",
         "bottom": -18,
         "top": 0.3,
@@ -772,14 +772,14 @@
         "opacity": 0.3
       },
       "PAA": {
-        "name": "PAA · P 型有源区",
+        "name": "P 型有源区",
         "color": "#bc8d9c",
         "bottom": -3,
         "top": 1,
         "opacity": 1
       },
       "NAA": {
-        "name": "NAA · N 型有源区",
+        "name": "N 型有源区",
         "color": "#86aa97",
         "bottom": -3,
         "top": 1,
@@ -793,7 +793,7 @@
         "opacity": 0.8
       },
       "POLY": {
-        "name": "多晶硅 / 栅",
+        "name": "多晶硅栅",
         "color": "#beaa7e",
         "bottom": 2,
         "top": 6,
@@ -807,7 +807,7 @@
         "opacity": 1
       },
       "M1": {
-        "name": "M1 · 电源与信号",
+        "name": "M1 金属层",
         "color": "#859fbd",
         "bottom": 15,
         "top": 18,

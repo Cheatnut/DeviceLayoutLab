@@ -103,7 +103,10 @@ select:hover { border-color: #93b7ed; }
 .object-button.selected { background: #e7f1ff; border-color: transparent; color: #205eb9; box-shadow: inset 3px 0 0 #3479ed; }
 .layer-controls { margin: 8px 18px 18px; padding-top: 19px; border-top: 1px solid var(--line); color: var(--muted); font-size: .73rem; }
 .layer-controls p { margin-bottom: 14px; color: var(--ink); font-weight: 600; }
-.layer-controls label { display: flex; align-items: center; gap: 8px; margin-block: 13px; cursor: pointer; }
+.layer-controls label { margin-block: 10px; cursor: pointer; }
+.layer-entry { display: grid; gap: 5px; }
+.layer-entry-name { display: flex; align-items: center; gap: 8px; min-height: 18px; }
+.layer-color-strip { display: block; height: 7px; margin-left: 22px; border: 1px solid rgb(35 59 88 / 15%); }
 input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; margin: 0; flex-shrink: 0; cursor: pointer; }
 
 .view-grid { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
@@ -115,12 +118,13 @@ input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; m
 .step-number { font-size: .66rem; color: #7191b5; margin-right: 7px; font-weight: 500; }
 .diagram-caption { padding: 9px 12px; margin: 0; min-height: 42px; font-size: .65rem; line-height: 1.7; color: var(--muted); border-top: 1px solid #e9eff6; }
 .diagram-text { fill: #344b64; font-size: 13px; font-family: inherit; pointer-events: none; paint-order: stroke; stroke: #fbfcfe; stroke-width: 2px; stroke-linejoin: round; }
+.teaching-diagram.text-hidden .diagram-text { display: none; }
 .diagram-note { fill: #7387a0; font-size: 12px; }
 .diagram-part { cursor: pointer; outline: none; }
 .diagram-part:hover { filter: brightness(.93); }
-.diagram-part.is-selected > rect, .diagram-part:focus-visible > rect { stroke: #185cb7; stroke-width: 2.4; }
-.diagram-part.is-selected polyline, .diagram-part.is-selected path, .diagram-part.is-selected circle { stroke: #185cb7; stroke-width: 3; }
-.diagram-part:focus-visible { filter: drop-shadow(0 0 2px #286ed0); }
+.diagram-part.is-selected > rect, .diagram-part:focus-visible > rect { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.diagram-part.is-selected polyline, .diagram-part.is-selected path, .diagram-part.is-selected circle { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.diagram-part:focus-visible { filter: drop-shadow(0 0 2px var(--selection-color)); }
 .logic-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; padding: 2px 4px; }
 .logic-banner strong { color: #2d527c; font-size: 1.05rem; letter-spacing: .035em; }
 .logic-banner span { font-size: .76rem; color: #607a98; }
@@ -142,6 +146,7 @@ input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; m
 .tool-button { display: grid; place-items: center; width: 32px; height: 32px; padding: 6px; border: 1px solid transparent; border-radius: 8px; color: #607690; background: transparent; }
 .tool-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .tool-button:hover { background: #edf4ff; color: #2569d6; }
+.diagram-text-toggle { width: 30px; height: 30px; padding: 5px; }
 .tool-button[aria-pressed="true"] { background: #e4efff; border-color: #c4dafb; color: #2366c8; }
 #model-pin svg { transition: transform .18s ease; }
 #model-pin[aria-pressed="true"] svg { transform: rotate(-35deg); }
