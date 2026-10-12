@@ -62,7 +62,7 @@ select:hover { border-color: #93b7ed; }
 .source-badge.orfs { color: #856021; background: #fff8ea; border: 1px solid #ecddbd; }
 .context-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; min-height: 58px; padding: 14px 20px; margin-bottom: 24px; background: rgb(255 255 255 / 60%); border: 1px solid rgb(255 255 255 / 95%); border-radius: 18px; box-shadow: 0 3px 18px rgb(53 91 149 / 3%); color: var(--muted); font-size: .76rem; }
 #case-title { color: var(--ink); font-weight: 600; margin-right: 2px; }
-#case-pdk, #case-stage { padding-left: 16px; border-left: 1px solid var(--line); }
+#case-stage { padding-left: 16px; border-left: 1px solid var(--line); }
 .status { color: #26745d; background: #ecf7f1; }
 .status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .status.pending { color: #8c6323; background: #fff7e7; }
@@ -113,8 +113,7 @@ select:hover { border-color: #93b7ed; }
 .layer-action { width: 28px; height: 28px; padding: 5px; }
 .layer-controls label { display: block; margin-block: 5px; cursor: pointer; }
 .layer-entry-name { display: flex; align-items: center; gap: 8px; min-height: 24px; color: #344962; font-size: .7rem; }
-input[type="checkbox"] { appearance: none; display: inline-grid; place-items: center; width: 14px; height: 14px; margin: 0; flex: 0 0 14px; border: 1.5px solid #a9b8ca; border-radius: 3px; background: #fff; cursor: pointer; }
-input[type="checkbox"]:checked { border-color: #2873df; background: #2873df; }
+input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; margin: 0; flex: 0 0 14px; cursor: pointer; }
 input[type="checkbox"]:disabled { opacity: .4; cursor: not-allowed; }
 input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offset: 2px; }
 
@@ -134,10 +133,13 @@ input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offse
 .diagram-part.is-selected > rect, .diagram-part:focus-visible > rect { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .diagram-part.is-selected polyline, .diagram-part.is-selected path, .diagram-part.is-selected circle { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .diagram-part:focus-visible { filter: drop-shadow(0 0 2px var(--selection-color)); }
-.logic-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; padding: 2px 4px; }
-.logic-banner strong { color: #2d527c; font-size: 1.05rem; letter-spacing: .035em; }
-.logic-banner span { font-size: .76rem; color: #607a98; }
-.logic-banner small { font-size: .65rem; color: #8091a6; margin-left: auto; }
+.logic-banner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 18px; padding: 14px 20px; }
+.logic-banner-title { display: flex; align-items: baseline; gap: 9px; grid-column: 1 / -1; }
+.logic-banner-title strong { color: #20334d; font-size: .9rem; font-weight: 650; }
+.logic-banner-title span { color: #526780; font-size: .77rem; }
+.logic-formula { color: #2d527c; font-size: 1.08rem; font-weight: 600; letter-spacing: .02em; }
+.logic-note { justify-self: end; color: #8b98a9; font-size: .68rem; }
+.logic-overbar { display: inline-block; border-top: 1.5px solid currentColor; padding-top: 2px; line-height: 1; }
 .material-swatch { display: inline-block; width: 11px; height: 11px; flex-shrink: 0; border: 1px solid rgb(35 59 88 / 15%); }
 .layout-grid { stroke: #dce7f6; stroke-width: .35; }
 .layout-row { fill: #eaf1fb; stroke: #b9cde7; stroke-width: .6; }

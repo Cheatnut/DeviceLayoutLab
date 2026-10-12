@@ -67,7 +67,15 @@ function pins(svg, s, layers = null, visibleEntities = null) {
 
 function sticks(svg, data, selected, layers, visibleEntities, pick) {
   const s = data.teaching;
-  if (layers.has("NWELL") && visibleEntities.has("nwell")) node(svg, "rect", { x:s.well[0], y:s.well[1], width:s.well[2], height:s.well[3], fill:"none", stroke:s.layers.NWELL.color, "stroke-dasharray":"5 4" });
+  for (const id of ["substrate", "field", "nwell"]) {
+    const entity = activeEntities.get(id);
+    if (!entity || !layers.has(entity.layer) || !visibleEntities.has(id)) continue;
+    const group = selectable(svg, id, selected, pick);
+    for (const [x,y,width,height] of entity.rects) {
+      node(group, "rect", { x, y, width, height, fill: "none", stroke: id === "nwell" ? entity.color : "none",
+        "stroke-dasharray": id === "nwell" ? "5 4" : "none" });
+    }
+  }
   for (const active of [...s.active, ...s.taps]) {
     if (!layers.has(active.layer) || !visibleEntities.has(active.id)) continue;
     const [x,y,w,h] = active.rect;
@@ -79,6 +87,12 @@ function sticks(svg, data, selected, layers, visibleEntities, pick) {
     if (!visibleEntities.has(gate.id)) continue;
     const g = selectable(svg, gate.id, selected, pick);
     line(g, [[gate.x,gate.top],[gate.x,gate.bottom]], s.layers.POLY.color, s.render.stickStroke);
+  }
+  if (layers.has("POLY")) for (const device of s.devices) {
+    if (!visibleEntities.has(device.id)) continue;
+    const group = selectable(svg, device.id, selected, pick);
+    node(group, "rect", { x: device.at[0]-16, y: device.at[1]-18, width: 32, height: 36,
+      fill: "transparent", stroke: "none" });
   }
   if (layers.has("M1")) for (const entity of data.entities.filter(e => e.paths && visibleEntities.has(e.id))) {
     const g = selectable(svg, entity.id, selected, pick);
@@ -178,11 +192,27 @@ export function renderTeachingViews(data, selected, layers, visibleEntities, pic
     svg.classList.toggle("text-hidden", document.querySelector(`[data-diagram-text="${id}"]`)?.getAttribute("aria-pressed") === "false");
     if(!data.teaching) text(svg,210,165,"此案例暂无版图数据",{"text-anchor":"middle"});
   }
-  document.getElementById("logic-formula").textContent=data.teaching?.formula ?? "等待案例数据";
-  document.getElementById("logic-note").textContent=data.teaching?.logicNote ?? "";
+  document.getElementById("logic-case-name").textContent = data.title ?? "案例";
+  document.getElementById("logic-kind").textContent = data.teaching?.kind === "NAND2" ? "与非门" : "非门";
+  renderLogicFormula(document.getElementById("logic-formula"), data.teaching?.formula ?? "等待案例数据");
+  document.getElementById("logic-note").textContent = data.teaching?.logicNote ?? "";
   if(!data.teaching) return;
   layout(document.getElementById(ids[0]),data,selected,layers,visibleEntities,pick);
   sticks(document.getElementById(ids[1]),data,selected,layers,visibleEntities,pick);
   positionalCircuit(document.getElementById(ids[2]),data,selected,pick);
   standardCircuit(document.getElementById(ids[3]),data,selected,pick);
+}
+
+function renderLogicFormula(container, formula) {
+  container.replaceChildren();
+  const negation = formula.match(/^(.*?)¬(.+)$/);
+  if (!negation) {
+    container.textContent = formula;
+    return;
+  }
+  container.append(document.createTextNode(negation[1]));
+  const overbar = document.createElement("span");
+  overbar.className = "logic-overbar";
+  overbar.textContent = negation[2];
+  container.append(overbar);
 }

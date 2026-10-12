@@ -8,8 +8,8 @@ const elements = {
   sourceBadge: document.querySelector("#source-badge"),
   title: document.querySelector("#case-title"),
   status: document.querySelector("#case-status"),
-  pdk: document.querySelector("#case-pdk"),
   stage: document.querySelector("#case-stage"),
+  objectList: document.querySelector("#object-list"),
   visibilityControls: document.querySelector("#visibility-controls"),
   layout: document.querySelector("#layout-view"),
   inspector: document.querySelector("#inspector-content"),
@@ -23,14 +23,13 @@ const visibleLayers = new Set();
 const visibleEntities = new Set();
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
 
-// 导航只切换展示区域，保留案例选择、图层与库资料，收起后仍能直接切换面板。
+// 左栏切换对象选择与工艺库；右栏对象说明、对象可见性和材料图层控制始终独立保留。
 function showPanel(panel) {
   const isLibrary = panel === "library";
   document.querySelector("#objects-section").hidden = isLibrary;
   document.querySelector("#library-section").hidden = !isLibrary;
   elements.inspector.hidden = isLibrary;
   document.querySelector("#library-detail").hidden = !isLibrary;
-  document.querySelector("#layer-controls").hidden = isLibrary;
   document.querySelector("#inspector-title").textContent = isLibrary ? "库单元说明" : "对象说明";
   document.querySelectorAll("[data-panel]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.panel === panel));
@@ -181,7 +180,6 @@ async function loadCase(caseId) {
   selectedId = null;
   elements.select.value = activeCase.id;
   elements.title.textContent = activeCase.title;
-  elements.pdk.textContent = `工艺：${activeCase.pdk}`;
   elements.stage.textContent = `阶段：${activeCase.stage}`;
   elements.status.textContent = activeCase.availability === "ready" ? "可浏览" : "等待环境核验";
   elements.status.classList.toggle("pending", activeCase.availability !== "ready");
@@ -189,11 +187,37 @@ async function loadCase(caseId) {
   elements.sourceBadge.className = `source-badge ${activeCase.sourceKind}`;
   renderVisibilityControls();
   renderLayerControls();
+  renderObjectList();
   scene.setCase(activeCase);
   scene.setLayers(visibleLayers);
   scene.setEntityVisibility(visibleEntities);
   renderLayout();
   renderCaseInspector();
+}
+
+function renderObjectList() {
+  elements.objectList.replaceChildren();
+  const entities = (activeCase.entities ?? []).filter(entity => entity.list !== false);
+  if (entities.length === 0) {
+    elements.objectList.textContent = "该案例暂无可选对象。";
+    return;
+  }
+  for (const entity of entities) {
+    const button = document.createElement("button");
+    button.className = `object-button ${entity.id === selectedId ? "selected" : ""}`;
+    button.type = "button";
+    button.dataset.entityId = entity.id;
+    const name = document.createElement("strong");
+    name.textContent = entity.name;
+    button.append(name);
+    if (entity.role && entity.role !== entity.name) {
+      const role = document.createElement("small");
+      role.textContent = entity.role;
+      button.append(role);
+    }
+    button.addEventListener("click", () => selectEntity(entity.id));
+    elements.objectList.append(button);
+  }
 }
 
 function visibilityGroups(entities) {
@@ -330,6 +354,7 @@ function selectEntity(entityId) {
   showPanel("objects");
   selectedId = entityId;
   scene.setSelection(entityId);
+  renderObjectList();
   renderLayout();
   const entity = activeCase.entities.find((item) => item.id === entityId);
   if (!entity) return;

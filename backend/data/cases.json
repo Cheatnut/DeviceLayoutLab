@@ -300,7 +300,7 @@
           ]
         ],
         "formula": "Y = ¬A",
-        "logicNote": "上拉：P₁；下拉：N₁"
+        "logicNote": "逻辑非用上划线表示 · 器件组成：1P1N"
       }
     },
     {
@@ -715,7 +715,7 @@
           ]
         ],
         "formula": "Y = ¬(A · B)",
-        "logicNote": "上拉：P₁ ∥ P₂；下拉：N₁ — N₂"
+        "logicNote": "逻辑非用上划线表示 · 器件组成：2P2N"
       }
     },
     {
