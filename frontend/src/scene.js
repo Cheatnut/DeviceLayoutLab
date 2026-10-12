@@ -59,14 +59,19 @@ export class TeachingScene {
   setCase(caseData) {
     for (const mesh of this.entityMeshes.values()) {
       this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      mesh.material.dispose();
+      mesh.traverse(child => { child.geometry?.dispose(); child.material?.dispose(); });
     }
     this.entityMeshes.clear();
     for (const label of this.labels.values()) label.remove();
     this.labels.clear();
     this.selectedId = null;
+    this.spec = caseData.teaching;
     const entities = caseData.entities ?? [];
+    if (this.spec) {
+      const scale = this.spec.render.scale;
+      this.grid.position.y = this.spec.layers.SUBSTRATE.bottom / scale - 0.03;
+      this.grid.scale.setScalar(Math.max(this.spec.viewBox[2], this.spec.viewBox[3]) / scale / 18 * 1.2);
+    }
     entities.forEach((entity) => {
       const mesh = this.createEntityMesh(entity);
       this.entityMeshes.set(entity.id, mesh);
@@ -74,6 +79,7 @@ export class TeachingScene {
       const label = document.createElement("span");
       label.className = "model-label";
       label.textContent = entity.name;
+      label.dataset.defaultVisible = String(entity.list !== false && !["FIELD", "CONTACT"].includes(entity.layer));
       this.labelOverlay.append(label);
       this.labels.set(entity.id, label);
     });
@@ -82,34 +88,27 @@ export class TeachingScene {
   }
 
   createEntityMesh(entity) {
-    const dimensions = this.dimensionsFor(entity);
-    const geometry = new THREE.BoxGeometry(dimensions.x, dimensions.y, dimensions.z);
-    const material = new THREE.MeshStandardMaterial({
-      color: entity.color,
-      transparent: entity.type === "route" || entity.type === "net",
-      opacity: entity.type === "route" || entity.type === "net" ? 0.8 : 1,
-      metalness: entity.type === "route" || entity.type === "via" ? 0.62 : 0.18,
-      roughness: 0.38,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.userData.entity = entity;
-    mesh.position.set((entity.x - 130) / 17, this.baseHeight(entity), (entity.y - 65) / 17);
-    mesh.name = entity.id;
-    return mesh;
-  }
-
-  dimensionsFor(entity) {
-    if (entity.type === "route") return { x: entity.width / 17, y: 0.16, z: 0.22 };
-    if (entity.type === "via") return { x: 0.42, y: 0.8, z: 0.42 };
-    if (entity.type === "net") return { x: entity.width / 17, y: 0.18, z: 0.34 };
-    return { x: entity.width / 17, y: 0.72, z: entity.height / 17 };
-  }
-
-  baseHeight(entity) {
-    if (entity.layer === "M2") return 1.3;
-    if (entity.layer === "VIA1") return 0.72;
-    if (entity.type === "net") return 0.18;
-    return 0.48;
+    const group = new THREE.Group();
+    group.userData.entity = entity;
+    group.name = entity.id;
+    const spec = this.spec;
+    const layer = spec.layers[entity.layer];
+    const scale = spec.render.scale;
+    // 二维矩形坐标表示左上角，三维盒体使用中心；全部视图共享相同平面坐标。
+    for (const [x, y, width, height] of entity.modelRects ?? entity.rects) {
+      const geometry = new THREE.BoxGeometry(width / scale, (layer.top - layer.bottom) / scale, height / scale);
+      const material = new THREE.MeshStandardMaterial({
+        color: entity.color, transparent: layer.opacity < 1, opacity: layer.opacity,
+        depthWrite: layer.opacity >= 1, metalness: entity.layer === "M1" ? .2 : .02, roughness: .7,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.userData.entity = entity;
+      mesh.position.set((x + width / 2 - spec.viewBox[2] / 2) / scale,
+        (layer.bottom + layer.top) / 2 / scale,
+        (y + height / 2 - spec.viewBox[3] / 2) / scale);
+      group.add(mesh);
+    }
+    return group;
   }
 
   setLayers(layers) {
@@ -127,9 +126,11 @@ export class TeachingScene {
   setSelection(entityId) {
     this.selectedId = entityId;
     for (const [id, mesh] of this.entityMeshes) {
-      const material = mesh.material;
-      material.emissive.set(id === entityId ? "#1c4e9a" : "#000000");
-      material.emissiveIntensity = id === entityId ? 0.9 : 0;
+      mesh.traverse(child => {
+        if (!child.material) return;
+        child.material.emissive.set(id === entityId ? "#1c4e9a" : "#000000");
+        child.material.emissiveIntensity = id === entityId ? 0.55 : 0;
+      });
       this.labels.get(id)?.classList.toggle("selected", id === entityId);
     }
     this.render();
@@ -159,7 +160,7 @@ export class TeachingScene {
     this.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
     this.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const intersections = this.raycaster.intersectObjects([...this.entityMeshes.values()].filter((mesh) => mesh.visible));
+    const intersections = this.raycaster.intersectObjects([...this.entityMeshes.values()].filter((mesh) => mesh.visible), true);
     if (intersections[0]) this.onPick(intersections[0].object.userData.entity.id);
   }
 
@@ -190,9 +191,11 @@ export class TeachingScene {
       label.style.transform = `translate(${x}px, ${y}px)`;
     };
     for (const [id, mesh] of this.entityMeshes) {
-      const anchor = mesh.position.clone();
-      anchor.y += this.dimensionsFor(mesh.userData.entity).y / 2;
-      positionLabel(this.labels.get(id), anchor, this.labelsVisible && mesh.visible);
+      const bounds = new THREE.Box3().setFromObject(mesh);
+      const anchor = bounds.getCenter(new THREE.Vector3());
+      anchor.y = bounds.max.y;
+      const label = this.labels.get(id);
+      positionLabel(label, anchor, this.labelsVisible && mesh.visible && (label.dataset.defaultVisible === "true" || id === this.selectedId));
     }
   }
 

@@ -49,12 +49,7 @@
             <div class="sidebar-body">
               <section id="objects-section" aria-label="对象与图层">
                 <div id="object-list" class="object-list" aria-label="对象列表"></div>
-                <div class="layer-controls">
-                  <p>显示图层</p>
-                  <label><input type="checkbox" data-layer="M1" checked /> M1 · 单元与电源轨</label>
-                  <label><input type="checkbox" data-layer="M2" checked /> M2 · 信号走线</label>
-                  <label><input type="checkbox" data-layer="VIA1" checked /> VIA1 · 层间连接</label>
-                </div>
+                <div id="layer-controls" class="layer-controls"></div>
               </section>
               <section id="library-section" class="library-browser" aria-label="工艺库" hidden>
                 <label for="library-pdk">已登记工艺</label>
@@ -67,13 +62,30 @@
         </aside>
 
         <section class="view-grid" aria-label="二维和三维联动工作台">
-          <article class="view-panel panel" id="layout-panel">
-            <div class="panel-heading">
-              <h2>二维版图</h2>
-              <span>原始平面几何</span>
-            </div>
-            <svg id="layout-view" viewBox="0 0 270 132" role="img" aria-label="二维标准单元行版图"></svg>
-          </article>
+          <div class="logic-banner"><strong id="logic-formula"></strong><span id="logic-note"></span><small>理想 CMOS · 教学比例 · 仅 M1</small></div>
+          <section class="derivation-grid" aria-label="从版图到电路的四步对照">
+            <article class="view-panel panel" id="layout-panel">
+              <div class="panel-heading"><h2><b class="step-number">01</b> 单元版图</h2><span>识别材料与接触</span></div>
+              <svg id="layout-view" class="teaching-diagram" role="img" aria-label="教学 CMOS 单元版图"></svg>
+              <p class="diagram-caption">场区：深蓝虚线 · 有源区：深蓝实线</p>
+            </article>
+            <article class="view-panel panel">
+              <div class="panel-heading"><h2><b class="step-number">02</b> 棍图</h2><span>保留拓扑，省略宽度</span></div>
+              <svg id="stick-view" class="teaching-diagram" role="img" aria-label="对应单元的棍图"></svg>
+              <p class="diagram-caption">方点表示接触；跨层交叉无接触则不相连</p>
+            </article>
+            <article class="view-panel panel">
+              <div class="panel-heading"><h2><b class="step-number">03</b> 位置对应电路</h2><span>栅交叠处替换为 MOS</span></div>
+              <svg id="positional-view" class="teaching-diagram" role="img" aria-label="保持版图器件位置的电路图"></svg>
+              <p class="diagram-caption">保持器件位置；弧线跨越不连接，圆点表示连接</p>
+            </article>
+            <article class="view-panel panel">
+              <div class="panel-heading"><h2><b class="step-number">04</b> 整理后的电路</h2><span>观察上拉与下拉</span></div>
+              <svg id="circuit-view" class="teaching-diagram" role="img" aria-label="标准串并联 CMOS 电路图"></svg>
+              <p class="diagram-caption">简化三端符号：PMOS 体接 VDD，NMOS 体接 GND</p>
+            </article>
+          </section>
+          <div id="material-legend" class="material-legend" aria-label="材料颜色图例"></div>
 
           <article class="view-panel panel" id="model-panel">
             <div class="panel-heading">

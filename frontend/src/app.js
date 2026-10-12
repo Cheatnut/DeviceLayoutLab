@@ -1,3 +1,4 @@
+import { renderTeachingViews } from "./teaching.js";
 import { TeachingScene } from "./scene.js";
 import { initializeLibrary } from "./library.js";
 
@@ -20,7 +21,7 @@ let catalog = null;
 let activeCase = null;
 let selectedId = null;
 let caseRequestVersion = 0;
-const visibleLayers = new Set(["M1", "M2", "VIA1"]);
+const visibleLayers = new Set();
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
 
 // 导航只切换展示区域，保留案例选择、图层与库资料，收起后仍能直接切换面板。
@@ -180,7 +181,9 @@ async function loadCase(caseId) {
   elements.sourceBadge.textContent = activeCase.sourceLabel;
   elements.sourceBadge.className = `source-badge ${activeCase.sourceKind}`;
   elements.runMessage.textContent = "";
+  renderLayerControls();
   scene.setCase(activeCase);
+  scene.setLayers(visibleLayers);
   renderObjectList();
   renderLayout();
   renderCaseInspector();
@@ -193,7 +196,7 @@ function renderObjectList() {
     elements.objectList.textContent = "该案例尚无可展示的真实对象。";
     return;
   }
-  activeCase.entities.forEach((entity) => {
+  activeCase.entities.filter(entity => entity.list !== false).forEach((entity) => {
     const button = document.createElement("button");
     button.className = `object-button ${entity.id === selectedId ? "selected" : ""}`;
     button.type = "button";
@@ -205,36 +208,40 @@ function renderObjectList() {
 }
 
 function renderLayout() {
-  const svgNamespace = "http://www.w3.org/2000/svg";
-  elements.layout.replaceChildren();
-  const grid = document.createElementNS(svgNamespace, "path");
-  grid.setAttribute("d", "M 0 30 H 270 M 0 60 H 270 M 0 90 H 270 M 30 0 V 132 M 60 0 V 132 M 90 0 V 132 M 120 0 V 132 M 150 0 V 132 M 180 0 V 132 M 210 0 V 132 M 240 0 V 132");
-  grid.setAttribute("class", "layout-grid");
-  elements.layout.append(grid);
-  const row = document.createElementNS(svgNamespace, "rect");
-  row.setAttribute("x", "7"); row.setAttribute("y", "37"); row.setAttribute("width", "248"); row.setAttribute("height", "51"); row.setAttribute("rx", "2"); row.setAttribute("class", "layout-row");
-  elements.layout.append(row);
-  activeCase.entities.forEach((entity) => {
-    const entityGroup = document.createElementNS(svgNamespace, "g");
-    entityGroup.dataset.entityId = entity.id;
-    const rectangle = document.createElementNS(svgNamespace, "rect");
-    rectangle.setAttribute("x", String(entity.x)); rectangle.setAttribute("y", String(entity.y));
-    rectangle.setAttribute("width", String(entity.width)); rectangle.setAttribute("height", String(entity.height));
-    rectangle.setAttribute("fill", entity.color); rectangle.setAttribute("rx", entity.type === "via" ? "2" : "1");
-    rectangle.setAttribute("class", `layout-entity ${entity.id === selectedId ? "selected" : ""}`);
-    rectangle.classList.toggle("dimmed", !visibleLayers.has(entity.layer));
-    rectangle.addEventListener("click", () => selectEntity(entity.id));
-    entityGroup.append(rectangle);
-    if (entity.type !== "net" || entity.height > 5) {
-      const label = document.createElementNS(svgNamespace, "text");
-      label.textContent = entity.name;
-      label.setAttribute("x", String(entity.x + entity.width / 2));
-      label.setAttribute("y", String(entity.y + entity.height / 2 + 2.5));
-      label.setAttribute("class", "layout-label");
-      entityGroup.append(label);
-    }
-    elements.layout.append(entityGroup);
-  });
+  renderTeachingViews(activeCase, selectedId, visibleLayers, selectEntity);
+}
+
+function renderLayerControls() {
+  const controls = document.querySelector("#layer-controls");
+  const legend = document.querySelector("#material-legend");
+  controls.replaceChildren();
+  legend.replaceChildren();
+  visibleLayers.clear();
+  const heading = document.createElement("p");
+  heading.textContent = "材料与图层";
+  controls.append(heading);
+  for (const [id, layer] of Object.entries(activeCase.teaching?.layers ?? {})) {
+    visibleLayers.add(id);
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = true;
+    input.dataset.layer = id;
+    const swatch = document.createElement("i");
+    swatch.className = "material-swatch";
+    swatch.style.background = layer.color;
+    label.append(input, swatch, document.createTextNode(layer.name));
+    controls.append(label);
+    const chip = document.createElement("span");
+    chip.append(swatch.cloneNode(), document.createTextNode(layer.name));
+    legend.append(chip);
+    input.addEventListener("change", () => {
+      if (input.checked) visibleLayers.add(id);
+      else visibleLayers.delete(id);
+      scene.setLayers(visibleLayers);
+      renderLayout();
+    });
+  }
 }
 
 function selectEntity(entityId) {
@@ -262,14 +269,6 @@ function renderCaseInspector() {
   elements.inspector.innerHTML = `<h3>${activeCase.title}</h3><p>${activeCase.description}</p><p>从二维或三维中选择对象，查看其教学角色和来源边界。</p>`;
 }
 
-document.querySelectorAll("[data-layer]").forEach((control) => {
-  control.addEventListener("change", () => {
-    if (control.checked) visibleLayers.add(control.dataset.layer);
-    else visibleLayers.delete(control.dataset.layer);
-    scene.setLayers(visibleLayers);
-    renderLayout();
-  });
-});
 
 elements.group.addEventListener("change", () => {
   populateGroupCases();

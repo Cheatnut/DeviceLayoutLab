@@ -28,17 +28,17 @@ class CaseCatalogTest(unittest.TestCase):
         self.assertEqual(len(case_ids), len(set(case_ids)))
 
     def test_ready_teaching_case_has_selectable_entities(self) -> None:
-        for case_id, master in (("sky130-teaching-inv", "INV_X1"), ("sky130-teaching-nand2", "NAND2_X1")):
+        for case_id, count in (("sky130-teaching-inv", 2), ("sky130-teaching-nand2", 4)):
             with self.subTest(case_id=case_id):
                 teaching_case = APP.find_case(self.config, case_id)
                 self.assertIsNotNone(teaching_case)
                 self.assertEqual(teaching_case["availability"], "ready")
                 entities = teaching_case["entities"]
-                self.assertEqual([entity["master"] for entity in entities if entity["type"] == "instance"], [master])
+                self.assertEqual(len([entity for entity in entities if "device" in entity]), count)
                 entity_ids = [entity["id"] for entity in entities]
                 self.assertEqual(len(entity_ids), len(set(entity_ids)))
-                signals = {entity["net"] for entity in entities if entity["type"] in {"instance", "route", "via"}}
-                self.assertEqual(len(signals), 1)
+                self.assertTrue({"SUBSTRATE", "NWELL", "PAA", "NAA", "POLY", "CONTACT", "M1"}.issubset({e["layer"] for e in entities}))
+                self.assertFalse({"M2", "VIA1"} & {e["layer"] for e in entities})
 
     def test_case_groups_cover_catalog_and_separate_teaching_cells(self) -> None:
         catalog = APP.load_case_catalog(self.config)

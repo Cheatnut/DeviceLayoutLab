@@ -23,6 +23,7 @@ if __package__ in {None, ""}:
 from backend.configuration import ConfigurationError, ServerConfiguration, load_configuration
 from backend.environment import public_environment
 from backend.library import LibraryStore, LibraryUnavailable
+from backend.teaching import build_teaching_case
 
 
 def load_case_catalog(config: ServerConfiguration) -> dict[str, Any]:
@@ -31,6 +32,7 @@ def load_case_catalog(config: ServerConfiguration) -> dict[str, Any]:
         catalog = json.load(case_file)
     if not isinstance(catalog.get("cases"), list):
         raise ValueError("cases.json 缺少 cases 列表")
+    catalog["cases"] = [build_teaching_case(case, catalog.get("teachingDefaults", {})) for case in catalog["cases"]]
     return catalog
 
 

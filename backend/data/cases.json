@@ -1,211 +1,722 @@
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "cases": [
     {
       "id": "sky130-teaching-inv",
       "title": "INV",
       "sourceKind": "teaching",
-      "sourceLabel": "教学编排场景 · 非 ORFS 结果",
+      "sourceLabel": "理想 CMOS · 教学比例",
       "availability": "ready",
-      "pdk": "SKY130（教学映射待资产核验）",
-      "stage": "局部标准单元行",
-      "description": "INV 独立局部标准单元行教学场景，展示该逻辑单元、Tap、电源轨及局部互连。位置、尺寸和三维高度均为教学参数，不代表真实工具结果。",
-      "entities": [
-        {
-          "id": "inst-u-inv0",
-          "type": "instance",
-          "name": "u_inv0",
-          "master": "INV_X1",
-          "role": "逻辑标准单元",
-          "net": "n_inv_y",
-          "layer": "M1",
-          "x": 80,
-          "y": 42,
-          "width": 76,
-          "height": 42,
-          "color": "#4a92ff",
-          "explanation": "反相器实例，逻辑为 Y = !A。当前矩形仅表示教学抽象边界，单元内部扩散区、栅和接触尚待真实库资产映射。"
+      "pdk": "理想平面 CMOS（非工艺库尺寸）",
+      "stage": "单元内部 · 版图到电路",
+      "description": "纯教学几何：依次对照单元版图、棍图、位置对应电路与整理后的电路。二维与三维共用平面坐标；层高为教学参数，未执行工艺规则验证。",
+      "entities": [],
+      "groupId": "local-standard-cell-row",
+      "teaching": {
+        "kind": "INV",
+        "substrate": [
+          25,
+          18,
+          370,
+          292
+        ],
+        "field": [
+          35,
+          26,
+          350,
+          276
+        ],
+        "well": [
+          45,
+          30,
+          330,
+          120
+        ],
+        "active": [
+          {
+            "id": "paa",
+            "name": "PAA",
+            "layer": "PAA",
+            "rect": [
+              112,
+              90,
+              132,
+              36
+            ]
+          },
+          {
+            "id": "naa",
+            "name": "NAA",
+            "layer": "NAA",
+            "rect": [
+              112,
+              222,
+              132,
+              36
+            ]
+          }
+        ],
+        "taps": [
+          {
+            "id": "well-tap",
+            "name": "N 阱接触",
+            "layer": "NAA",
+            "rect": [
+              60,
+              62,
+              24,
+              22
+            ],
+            "net": "VDD",
+            "contact": [
+              72,
+              73
+            ]
+          },
+          {
+            "id": "substrate-tap",
+            "name": "P 衬底接触",
+            "layer": "PAA",
+            "rect": [
+              60,
+              265,
+              24,
+              22
+            ],
+            "net": "GND",
+            "contact": [
+              72,
+              276
+            ]
+          }
+        ],
+        "gates": [
+          {
+            "id": "gate-a",
+            "net": "A",
+            "x": 177,
+            "top": 76,
+            "bottom": 272
+          }
+        ],
+        "rails": {
+          "VDD": [
+            [
+              55,
+              46
+            ],
+            [
+              365,
+              46
+            ]
+          ],
+          "GND": [
+            [
+              55,
+              294
+            ],
+            [
+              365,
+              294
+            ]
+          ]
         },
-        {
-          "id": "inst-u-tap0",
-          "type": "physicalCell",
-          "name": "u_tap0",
-          "master": "TAPCELL",
-          "role": "阱/衬底接触教学单元",
-          "net": "VPWR/VGND",
-          "layer": "M1",
-          "x": 12,
-          "y": 42,
-          "width": 20,
-          "height": 42,
-          "color": "#e79f3c",
-          "explanation": "Tap 用于说明阱或衬底接触与电源轨的关系。这里是教学位置，不代表选定库中该单元的真实尺寸或插入结果。"
+        "wires": {
+          "VDD": [
+            [
+              [
+                132,
+                46
+              ],
+              [
+                132,
+                108
+              ]
+            ],
+            [
+              [
+                72,
+                46
+              ],
+              [
+                72,
+                73
+              ]
+            ]
+          ],
+          "GND": [
+            [
+              [
+                132,
+                240
+              ],
+              [
+                132,
+                294
+              ]
+            ],
+            [
+              [
+                72,
+                276
+              ],
+              [
+                72,
+                294
+              ]
+            ]
+          ],
+          "Y": [
+            [
+              [
+                222,
+                108
+              ],
+              [
+                222,
+                240
+              ]
+            ],
+            [
+              [
+                222,
+                170
+              ],
+              [
+                366,
+                170
+              ]
+            ]
+          ]
         },
-        {
-          "id": "net-vpwr",
-          "type": "net",
-          "name": "VPWR",
-          "master": "电源轨",
-          "role": "电源网络",
-          "net": "VPWR",
-          "layer": "M1",
-          "x": 8,
-          "y": 18,
-          "width": 244,
-          "height": 8,
-          "color": "#f05b67",
-          "explanation": "电源轨的教学表示。实际电源网络、层名和连通性必须以 LEF、DEF/ODB 及提取数据为依据。"
+        "contacts": {
+          "VDD": [
+            [
+              132,
+              108
+            ],
+            [
+              72,
+              73
+            ]
+          ],
+          "GND": [
+            [
+              132,
+              240
+            ],
+            [
+              72,
+              276
+            ]
+          ],
+          "Y": [
+            [
+              222,
+              108
+            ],
+            [
+              222,
+              240
+            ]
+          ]
         },
-        {
-          "id": "net-vgnd",
-          "type": "net",
-          "name": "VGND",
-          "master": "地轨",
-          "role": "电源网络",
-          "net": "VGND",
-          "layer": "M1",
-          "x": 8,
-          "y": 102,
-          "width": 244,
-          "height": 8,
-          "color": "#536179",
-          "explanation": "地轨的教学表示。它用于说明标准单元行中电源连接和镜像方向的约束。"
-        },
-        {
-          "id": "route-n-inv-y",
-          "type": "route",
-          "name": "n_inv_y",
-          "master": "信号走线",
-          "role": "局部互连",
-          "net": "n_inv_y",
-          "layer": "M2",
-          "x": 96,
-          "y": 84,
-          "width": 92,
-          "height": 6,
-          "color": "#45d0ad",
-          "explanation": "M2 教学走线。它跨越单元上方；是否连接取决于端点、通孔和数据库连通关系，不能仅看二维重叠。"
-        },
-        {
-          "id": "via-n-inv-y",
-          "type": "via",
-          "name": "VIA1_n_inv_y",
-          "master": "VIA1",
-          "role": "层间连接",
-          "net": "n_inv_y",
-          "layer": "VIA1",
-          "x": 106,
-          "y": 70,
-          "width": 10,
-          "height": 10,
-          "color": "#f4dc70",
-          "explanation": "VIA1 教学对象，表示 M1 与 M2 间的层对关系。后续接入真实案例时将从版图数据库读取。"
-        }
-      ],
-      "groupId": "local-standard-cell-row"
+        "devices": [
+          {
+            "id": "p-a",
+            "name": "P₁",
+            "type": "pmos",
+            "gate": "A",
+            "source": "VDD",
+            "drain": "Y",
+            "body": "VDD",
+            "at": [
+              177,
+              108
+            ],
+            "standard": [
+              210,
+              97
+            ]
+          },
+          {
+            "id": "n-a",
+            "name": "N₁",
+            "type": "nmos",
+            "gate": "A",
+            "source": "GND",
+            "drain": "Y",
+            "body": "GND",
+            "at": [
+              177,
+              240
+            ],
+            "standard": [
+              210,
+              243
+            ]
+          }
+        ],
+        "standardWires": [
+          [
+            [
+              210,
+              32
+            ],
+            [
+              210,
+              71
+            ]
+          ],
+          [
+            [
+              210,
+              123
+            ],
+            [
+              210,
+              217
+            ]
+          ],
+          [
+            [
+              210,
+              269
+            ],
+            [
+              210,
+              310
+            ]
+          ],
+          [
+            [
+              210,
+              170
+            ],
+            [
+              345,
+              170
+            ]
+          ]
+        ],
+        "formula": "Y = ¬A",
+        "logicNote": "上拉：P₁；下拉：N₁"
+      }
     },
     {
       "id": "sky130-teaching-nand2",
       "title": "NAND2",
       "sourceKind": "teaching",
-      "sourceLabel": "教学编排场景 · 非 ORFS 结果",
+      "sourceLabel": "理想 CMOS · 教学比例",
       "availability": "ready",
-      "pdk": "SKY130（教学映射待资产核验）",
-      "stage": "局部标准单元行",
-      "description": "NAND2 独立局部标准单元行教学场景，展示该逻辑单元、Tap、电源轨及局部互连。位置、尺寸和三维高度均为教学参数，不代表真实工具结果。",
-      "entities": [
-        {
-          "id": "inst-u-nand0",
-          "type": "instance",
-          "name": "u_nand0",
-          "master": "NAND2_X1",
-          "role": "逻辑标准单元",
-          "net": "n_nand2_y",
-          "layer": "M1",
-          "x": 80,
-          "y": 42,
-          "width": 88,
-          "height": 42,
-          "color": "#8b6bff",
-          "explanation": "二输入 NAND 实例，逻辑为 Y = !(A & B)。当前矩形仅表示教学抽象边界，单元内部扩散区、栅和接触尚待真实库资产映射。"
+      "pdk": "理想平面 CMOS（非工艺库尺寸）",
+      "stage": "单元内部 · 版图到电路",
+      "description": "纯教学几何：依次对照单元版图、棍图、位置对应电路与整理后的电路。二维与三维共用平面坐标；层高为教学参数，未执行工艺规则验证。",
+      "entities": [],
+      "groupId": "local-standard-cell-row",
+      "teaching": {
+        "kind": "NAND2",
+        "substrate": [
+          25,
+          18,
+          370,
+          292
+        ],
+        "field": [
+          35,
+          26,
+          350,
+          276
+        ],
+        "well": [
+          45,
+          30,
+          330,
+          120
+        ],
+        "active": [
+          {
+            "id": "paa",
+            "name": "PAA",
+            "layer": "PAA",
+            "rect": [
+              112,
+              90,
+              222,
+              36
+            ]
+          },
+          {
+            "id": "naa",
+            "name": "NAA",
+            "layer": "NAA",
+            "rect": [
+              112,
+              222,
+              222,
+              36
+            ]
+          }
+        ],
+        "taps": [
+          {
+            "id": "well-tap",
+            "name": "N 阱接触",
+            "layer": "NAA",
+            "rect": [
+              60,
+              62,
+              24,
+              22
+            ],
+            "net": "VDD",
+            "contact": [
+              72,
+              73
+            ]
+          },
+          {
+            "id": "substrate-tap",
+            "name": "P 衬底接触",
+            "layer": "PAA",
+            "rect": [
+              60,
+              265,
+              24,
+              22
+            ],
+            "net": "GND",
+            "contact": [
+              72,
+              276
+            ]
+          }
+        ],
+        "gates": [
+          {
+            "id": "gate-a",
+            "net": "A",
+            "x": 177,
+            "top": 76,
+            "bottom": 272
+          },
+          {
+            "id": "gate-b",
+            "net": "B",
+            "x": 267,
+            "top": 76,
+            "bottom": 272
+          }
+        ],
+        "rails": {
+          "VDD": [
+            [
+              55,
+              46
+            ],
+            [
+              365,
+              46
+            ]
+          ],
+          "GND": [
+            [
+              55,
+              294
+            ],
+            [
+              365,
+              294
+            ]
+          ]
         },
-        {
-          "id": "inst-u-tap0",
-          "type": "physicalCell",
-          "name": "u_tap0",
-          "master": "TAPCELL",
-          "role": "阱/衬底接触教学单元",
-          "net": "VPWR/VGND",
-          "layer": "M1",
-          "x": 12,
-          "y": 42,
-          "width": 20,
-          "height": 42,
-          "color": "#e79f3c",
-          "explanation": "Tap 用于说明阱或衬底接触与电源轨的关系。这里是教学位置，不代表选定库中该单元的真实尺寸或插入结果。"
+        "wires": {
+          "VDD": [
+            [
+              [
+                132,
+                46
+              ],
+              [
+                132,
+                108
+              ]
+            ],
+            [
+              [
+                312,
+                46
+              ],
+              [
+                312,
+                108
+              ]
+            ],
+            [
+              [
+                72,
+                46
+              ],
+              [
+                72,
+                73
+              ]
+            ]
+          ],
+          "GND": [
+            [
+              [
+                312,
+                240
+              ],
+              [
+                312,
+                294
+              ]
+            ],
+            [
+              [
+                72,
+                276
+              ],
+              [
+                72,
+                294
+              ]
+            ]
+          ],
+          "Y": [
+            [
+              [
+                222,
+                108
+              ],
+              [
+                222,
+                170
+              ],
+              [
+                92,
+                170
+              ],
+              [
+                92,
+                240
+              ],
+              [
+                132,
+                240
+              ]
+            ],
+            [
+              [
+                222,
+                170
+              ],
+              [
+                366,
+                170
+              ]
+            ]
+          ]
         },
-        {
-          "id": "net-vpwr",
-          "type": "net",
-          "name": "VPWR",
-          "master": "电源轨",
-          "role": "电源网络",
-          "net": "VPWR",
-          "layer": "M1",
-          "x": 8,
-          "y": 18,
-          "width": 244,
-          "height": 8,
-          "color": "#f05b67",
-          "explanation": "电源轨的教学表示。实际电源网络、层名和连通性必须以 LEF、DEF/ODB 及提取数据为依据。"
+        "contacts": {
+          "VDD": [
+            [
+              132,
+              108
+            ],
+            [
+              312,
+              108
+            ],
+            [
+              72,
+              73
+            ]
+          ],
+          "GND": [
+            [
+              312,
+              240
+            ],
+            [
+              72,
+              276
+            ]
+          ],
+          "Y": [
+            [
+              222,
+              108
+            ],
+            [
+              132,
+              240
+            ]
+          ]
         },
-        {
-          "id": "net-vgnd",
-          "type": "net",
-          "name": "VGND",
-          "master": "地轨",
-          "role": "电源网络",
-          "net": "VGND",
-          "layer": "M1",
-          "x": 8,
-          "y": 102,
-          "width": 244,
-          "height": 8,
-          "color": "#536179",
-          "explanation": "地轨的教学表示。它用于说明标准单元行中电源连接和镜像方向的约束。"
-        },
-        {
-          "id": "route-n-nand2-y",
-          "type": "route",
-          "name": "n_nand2_y",
-          "master": "信号走线",
-          "role": "局部互连",
-          "net": "n_nand2_y",
-          "layer": "M2",
-          "x": 96,
-          "y": 84,
-          "width": 92,
-          "height": 6,
-          "color": "#45d0ad",
-          "explanation": "M2 教学走线。它跨越单元上方；是否连接取决于端点、通孔和数据库连通关系，不能仅看二维重叠。"
-        },
-        {
-          "id": "via-n-nand2-y",
-          "type": "via",
-          "name": "VIA1_n_nand2_y",
-          "master": "VIA1",
-          "role": "层间连接",
-          "net": "n_nand2_y",
-          "layer": "VIA1",
-          "x": 106,
-          "y": 70,
-          "width": 10,
-          "height": 10,
-          "color": "#f4dc70",
-          "explanation": "VIA1 教学对象，表示 M1 与 M2 间的层对关系。后续接入真实案例时将从版图数据库读取。"
-        }
-      ],
-      "groupId": "local-standard-cell-row"
+        "devices": [
+          {
+            "id": "p-a",
+            "name": "P₁",
+            "type": "pmos",
+            "gate": "A",
+            "source": "VDD",
+            "drain": "Y",
+            "body": "VDD",
+            "at": [
+              177,
+              108
+            ],
+            "standard": [
+              155,
+              97
+            ]
+          },
+          {
+            "id": "p-b",
+            "name": "P₂",
+            "type": "pmos",
+            "gate": "B",
+            "source": "VDD",
+            "drain": "Y",
+            "body": "VDD",
+            "at": [
+              267,
+              108
+            ],
+            "standard": [
+              265,
+              97
+            ]
+          },
+          {
+            "id": "n-a",
+            "name": "N₁",
+            "type": "nmos",
+            "gate": "A",
+            "source": "X",
+            "drain": "Y",
+            "body": "GND",
+            "at": [
+              177,
+              240
+            ],
+            "standard": [
+              210,
+              205
+            ]
+          },
+          {
+            "id": "n-b",
+            "name": "N₂",
+            "type": "nmos",
+            "gate": "B",
+            "source": "GND",
+            "drain": "X",
+            "body": "GND",
+            "at": [
+              267,
+              240
+            ],
+            "standard": [
+              210,
+              267
+            ]
+          }
+        ],
+        "standardWires": [
+          [
+            [
+              155,
+              71
+            ],
+            [
+              155,
+              46
+            ],
+            [
+              265,
+              46
+            ],
+            [
+              265,
+              71
+            ]
+          ],
+          [
+            [
+              210,
+              46
+            ],
+            [
+              210,
+              32
+            ]
+          ],
+          [
+            [
+              155,
+              123
+            ],
+            [
+              155,
+              157
+            ],
+            [
+              265,
+              157
+            ],
+            [
+              265,
+              123
+            ]
+          ],
+          [
+            [
+              210,
+              157
+            ],
+            [
+              210,
+              179
+            ]
+          ],
+          [
+            [
+              210,
+              231
+            ],
+            [
+              210,
+              241
+            ]
+          ],
+          [
+            [
+              210,
+              293
+            ],
+            [
+              210,
+              310
+            ]
+          ],
+          [
+            [
+              210,
+              157
+            ],
+            [
+              345,
+              157
+            ]
+          ]
+        ],
+        "formula": "Y = ¬(A · B)",
+        "logicNote": "上拉：P₁ ∥ P₂；下拉：N₁ — N₂"
+      }
     },
     {
       "id": "sky130-orfs-datapath",
@@ -229,5 +740,89 @@
       "id": "orfs-designs",
       "title": "ORFS 设计"
     }
-  ]
+  ],
+  "teachingDefaults": {
+    "unit": "教学单位",
+    "viewBox": [
+      0,
+      0,
+      420,
+      330
+    ],
+    "layers": {
+      "SUBSTRATE": {
+        "name": "P 衬底",
+        "color": "#b7c3cf",
+        "bottom": -26,
+        "top": 0,
+        "opacity": 0.5
+      },
+      "NWELL": {
+        "name": "N-well",
+        "color": "#b1a9c4",
+        "bottom": -18,
+        "top": 0.3,
+        "opacity": 0.75
+      },
+      "FIELD": {
+        "name": "场区 / 隔离氧化层",
+        "color": "#d0d6db",
+        "bottom": 0.4,
+        "top": 2,
+        "opacity": 0.3
+      },
+      "PAA": {
+        "name": "PAA · P 型有源区",
+        "color": "#bc8d9c",
+        "bottom": -3,
+        "top": 1,
+        "opacity": 1
+      },
+      "NAA": {
+        "name": "NAA · N 型有源区",
+        "color": "#86aa97",
+        "bottom": -3,
+        "top": 1,
+        "opacity": 1
+      },
+      "OXIDE": {
+        "name": "栅氧化层",
+        "color": "#c1bca4",
+        "bottom": 1.1,
+        "top": 2,
+        "opacity": 0.8
+      },
+      "POLY": {
+        "name": "多晶硅 / 栅",
+        "color": "#beaa7e",
+        "bottom": 2,
+        "top": 6,
+        "opacity": 1
+      },
+      "CONTACT": {
+        "name": "接触孔",
+        "color": "#59677b",
+        "bottom": 1,
+        "top": 15,
+        "opacity": 1
+      },
+      "M1": {
+        "name": "M1 · 电源与信号",
+        "color": "#859fbd",
+        "bottom": 15,
+        "top": 18,
+        "opacity": 0.94
+      }
+    },
+    "boundaryColor": "#345477",
+    "metalWidth": 10,
+    "polyWidth": 12,
+    "contactSize": 9,
+    "render": {
+      "scale": 24,
+      "diagramStroke": 2,
+      "stickStroke": 5,
+      "modelLabelLimit": 12
+    }
+  }
 }

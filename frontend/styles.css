@@ -106,9 +106,29 @@ select:hover { border-color: #93b7ed; }
 .layer-controls label { display: flex; align-items: center; gap: 8px; margin-block: 13px; cursor: pointer; }
 input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px; margin: 0; flex-shrink: 0; cursor: pointer; }
 
-.view-grid { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.view-grid { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .view-panel { overflow: hidden; }
-#layout-view { display: block; width: 100%; height: clamp(300px, 48vh, 520px); background: #f7faff; }
+.derivation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.teaching-diagram { display: block; width: 100%; aspect-ratio: 420 / 330; background: #fbfcfe; }
+.derivation-grid .panel-heading { padding: 14px; min-height: 58px; }
+.derivation-grid .panel-heading h2 { font-size: .8rem; }
+.step-number { font-size: .66rem; color: #7191b5; margin-right: 7px; font-weight: 500; }
+.diagram-caption { padding: 9px 12px; margin: 0; min-height: 42px; font-size: .65rem; line-height: 1.7; color: var(--muted); border-top: 1px solid #e9eff6; }
+.diagram-text { fill: #344b64; font-size: 13px; font-family: inherit; pointer-events: none; paint-order: stroke; stroke: #fbfcfe; stroke-width: 2px; stroke-linejoin: round; }
+.diagram-note { fill: #7387a0; font-size: 12px; }
+.diagram-part { cursor: pointer; outline: none; }
+.diagram-part:hover { filter: brightness(.93); }
+.diagram-part.is-selected > rect, .diagram-part:focus-visible > rect { stroke: #185cb7; stroke-width: 2.4; }
+.diagram-part.is-selected polyline, .diagram-part.is-selected path, .diagram-part.is-selected circle { stroke: #185cb7; stroke-width: 3; }
+.diagram-part:focus-visible { filter: drop-shadow(0 0 2px #286ed0); }
+.logic-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; padding: 2px 4px; }
+.logic-banner strong { color: #2d527c; font-size: 1.05rem; letter-spacing: .035em; }
+.logic-banner span { font-size: .76rem; color: #607a98; }
+.logic-banner small { font-size: .65rem; color: #8091a6; margin-left: auto; }
+.material-legend { display: flex; flex-wrap: wrap; gap: 9px 15px; padding: 2px 4px 8px; font-size: .67rem; color: var(--muted); }
+.material-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.material-swatch { display: inline-block; width: 11px; height: 11px; flex-shrink: 0; border: 1px solid rgb(35 59 88 / 15%); }
+.object-list { max-height: 410px; overflow-y: auto; scrollbar-width: thin; }
 .layout-grid { stroke: #dce7f6; stroke-width: .35; }
 .layout-row { fill: #eaf1fb; stroke: #b9cde7; stroke-width: .6; }
 .layout-entity { cursor: pointer; stroke: #f6faff; stroke-width: 1.2; transition: opacity .15s; }
