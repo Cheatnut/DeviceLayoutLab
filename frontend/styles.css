@@ -164,6 +164,16 @@ input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offse
 
 .inspector-content { padding: 20px; color: var(--muted); font-size: .8rem; line-height: 1.8; }
 .inspector-content h3 { color: var(--ink); font-size: .95rem; line-height: 1.55; font-weight: 600; margin-bottom: 12px; }
+.object-source { margin: 18px 0 0; color: var(--muted); font-size: .68rem; }
+.poly-carousel { margin-top: 18px; border: 1px solid var(--line); border-radius: 14px; background: #f6f9ff; padding: 14px; }
+.poly-carousel:focus-visible { outline: 2px solid #7bafff; outline-offset: 3px; }
+.poly-card-viewport { overflow: hidden; }
+.poly-card { min-height: 145px; }
+.poly-card h4 { margin: 0 0 10px; color: var(--ink); font-size: .84rem; }
+.poly-card p { margin: 0; font-size: .74rem; }
+.poly-card-navigation { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.poly-card-navigation span { color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
+.poly-carousel > small { display: block; text-align: center; font-size: .64rem; margin-top: 8px; color: var(--muted); }
 .metadata { display: grid; gap: 10px; margin: 20px 0 0; padding-top: 18px; border-top: 1px solid var(--line); font-size: .73rem; }
 .metadata div { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; }
 .metadata dt { color: var(--muted); }

@@ -68,19 +68,26 @@ def build_teaching_case(case, defaults):
             rects = [piece for rect in rects for piece in subtract_rect(rect, r)]
             add(device["id"], f'{device["name"]} · {device["type"].upper()}', "POLY", [r],
                 f'栅 {device["gate"]}；源 {device["source"]}；漏 {device["drain"]}；体 {device["body"]}。该栅位于多晶硅与有源区交叠处。', device["gate"], device=device)
-            add(f'oxide-{device["id"]}', f'{device["name"]} 栅氧', "OXIDE", [r], "栅与沟道之间的绝缘层。厚度仅为教学显示参数。", list=False, planar=False)
+            add(f'oxide-{device["id"]}', f'{device["name"]} 栅氧', "OXIDE", [r], "栅与沟道之间的绝缘层。厚度仅为教学显示参数。", list=False, planar=False, ownerId=device["id"])
         add(gate["id"], f'{gate["net"]} · 多晶硅', "POLY", rects, "连续多晶硅将同一输入接到上下两只 MOS 的栅。与 M1 交叉而没有接触孔时不连接。", gate["net"])
+    rail_rects = {}
+    for net, path in spec["rails"].items():
+        rail_rects[net] = wire_rects(path, spec["metalWidth"])
+        add(f'rail-{net}', f'{net} 电源轨', "M1", rail_rects[net],
+            "沿单元边缘延伸的电源轨；通向器件和体接触的支线归入 M1 金属连线。", net, paths=[path], metalRole="rail")
     for net, paths in spec["wires"].items():
-        paths = ([spec["rails"][net]] if net in spec["rails"] else []) + paths
         rects = [rect for path in paths for rect in wire_rects(path, spec["metalWidth"])]
         merged = []
         for rect in rects:
             pieces = [rect]
             for existing in merged:
                 pieces = [part for piece in pieces for part in subtract_rect(piece, existing)]
+            # 电源轨独立选择；把交叠体积留给电源轨，拆分前后的几何并集保持不变。
+            for rail in rail_rects.get(net, []):
+                pieces = [part for piece in pieces for part in subtract_rect(piece, rail)]
             merged.extend(pieces)
         # 去除转弯处重复体积，避免三维共面闪烁及二维透明叠色。
-        add(f'metal-{net}', f'{net} · M1', "M1", merged, "同层相接的金属连通；金属与有源区之间通过接触孔连接。所有金属均为 M1，以标签区分网络。", net, paths=paths)
+        add(f'metal-{net}', f'{net} · M1', "M1", merged, "同层相接的金属连通；金属与有源区之间通过接触孔连接。所有金属均为 M1，以标签区分网络。", net, paths=paths, metalRole="wire")
     for net, points in spec["contacts"].items():
         size = spec["contactSize"]
         add(f'contact-{net}', f'{net} · 接触孔', "CONTACT", [[x-size/2,y-size/2,size,size] for x,y in points], "深色方孔表示有源区到 M1 的接触连接；不表示 M1/M2 通孔。", net)

@@ -1,6 +1,7 @@
 import { renderTeachingViews } from "./teaching.js";
 import { TeachingScene } from "./scene.js";
 import { initializeLibrary } from "./library.js";
+import { teachingObjects, polyCards, cycleCard } from "./objects.js";
 
 const elements = {
   group: document.querySelector("#case-group-select"),
@@ -17,7 +18,11 @@ const elements = {
 
 let catalog = null;
 let activeCase = null;
-let selectedId = null;
+let selectedGroupId = null;
+let selectedIds = new Set();
+let objectGroups = [];
+let cards = [];
+let cardIndex = 0;
 let caseRequestVersion = 0;
 const visibleLayers = new Set();
 const visibleEntities = new Set();
@@ -100,7 +105,7 @@ for (const button of document.querySelectorAll("[data-diagram-text]")) {
     const svg = document.getElementById(button.dataset.diagramText);
     const visible = button.getAttribute("aria-pressed") !== "true";
     button.setAttribute("aria-pressed", String(visible));
-    button.setAttribute("aria-label", `${visible ? "隐藏" : "显示"}${button.dataset.diagramText === "layout-view" ? "单元版图" : button.dataset.diagramText === "stick-view" ? "棍图" : button.dataset.diagramText === "positional-view" ? "位置对应电路" : "整理后电路"}文字`);
+    button.setAttribute("aria-label", `${visible ? "隐藏" : "显示"}${button.dataset.diagramText === "layout-view" ? "单元版图" : "棍图"}文字`);
     button.title = `${visible ? "隐藏" : "显示"}文字`;
     svg.classList.toggle("text-hidden", !visible);
   });
@@ -177,7 +182,11 @@ async function loadCase(caseId) {
   // 快速切换时只应用最后一次请求，较晚返回的旧请求不得覆盖新场景。
   if (version !== caseRequestVersion) return;
   activeCase = loaded;
-  selectedId = null;
+  selectedGroupId = null;
+  selectedIds = new Set();
+  objectGroups = teachingObjects(activeCase);
+  cards = [];
+  cardIndex = 0;
   elements.select.value = activeCase.id;
   elements.title.textContent = activeCase.title;
   elements.stage.textContent = `阶段：${activeCase.stage}`;
@@ -197,16 +206,17 @@ async function loadCase(caseId) {
 
 function renderObjectList() {
   elements.objectList.replaceChildren();
-  const groups = visibilityGroups(activeCase.entities ?? []);
+  const groups = objectGroups;
   if (groups.length === 0) {
     elements.objectList.textContent = "该案例暂无可选对象。";
     return;
   }
   for (const group of groups) {
     const button = document.createElement("button");
-    button.className = `object-button ${group.ids.includes(selectedId) ? "selected" : ""}`;
+    button.className = `object-button ${group.id === selectedGroupId ? "selected" : ""}`;
+    button.setAttribute("aria-pressed", String(group.id === selectedGroupId));
     button.type = "button";
-    button.dataset.entityId = group.ids[0] ?? "";
+    button.dataset.objectId = group.id;
     button.disabled = group.ids.length === 0;
     const name = document.createElement("strong");
     name.textContent = group.name;
@@ -214,28 +224,9 @@ function renderObjectList() {
     const note = document.createElement("small");
     note.textContent = group.note;
     button.append(note);
-    button.addEventListener("click", () => selectEntity(group.ids[0]));
+    button.addEventListener("click", () => selectObject(group));
     elements.objectList.append(button);
   }
-}
-
-function visibilityGroups(entities) {
-  const definitions = [
-    ["P衬底", "NMOS 所在的衬底与隔离场区", entity => entity.id === "substrate" || entity.layer === "FIELD"],
-    ["N-well", "PMOS 所在的 N 型阱区", entity => entity.id === "nwell"],
-    ["P衬底接触", "把 P 衬底连接到 GND", entity => entity.id === "substrate-tap"],
-    ["N阱接触", "把 N 阱连接到 VDD", entity => entity.id === "well-tap"],
-    ["P型有源区", "PMOS 源极、漏极与沟道区域", entity => entity.id === "paa"],
-    ["N型有源区", "NMOS 源极、漏极与沟道区域", entity => entity.id === "naa"],
-    ["VDD", "正电源轨及其连接", entity => entity.layer === "M1" && entity.net === "VDD"],
-    ["GND", "接地轨及其连接", entity => entity.layer === "M1" && entity.net === "GND"],
-    ["多晶硅", "输入栅极与栅氧结构", entity => ["POLY", "OXIDE"].includes(entity.layer)],
-    ["接触孔", "连接有源区与金属层的孔", entity => entity.layer === "CONTACT"],
-    ["M1金属连线", "信号网络连线，不含 VDD 与 GND", entity => entity.layer === "M1" && !["VDD", "GND"].includes(entity.net)],
-  ];
-  return definitions.map(([name, note, matches]) => ({
-    name, note, ids: entities.filter(matches).map(entity => entity.id),
-  }));
 }
 
 function renderVisibilityControls() {
@@ -269,7 +260,7 @@ function renderVisibilityControls() {
   heading.append(title, actions);
   controls.append(heading);
   const entities = activeCase.entities ?? [];
-  const groups = visibilityGroups(entities);
+  const groups = objectGroups;
   visibleEntities.clear();
   entities.forEach(entity => visibleEntities.add(entity.id));
   for (const group of groups) {
@@ -280,6 +271,7 @@ function renderVisibilityControls() {
     input.checked = group.ids.length > 0;
     input.disabled = group.ids.length === 0;
     input.dataset.visibilityGroup = group.ids.join(",");
+    input.dataset.objectId = group.id;
     input.setAttribute("aria-label", `显示${group.name}`);
     const text = document.createElement("span");
     text.className = "visibility-entry-text";
@@ -303,6 +295,7 @@ function renderVisibilityControls() {
     const button = event.target.closest("[data-visibility-action]");
     if (!button) return;
     for (const input of controls.querySelectorAll("input[data-visibility-group]")) {
+      if (input.disabled) continue;
       input.checked = button.dataset.visibilityAction === "all" ? true : !input.checked;
       for (const id of input.dataset.visibilityGroup.split(",").filter(Boolean)) {
         if (input.checked) visibleEntities.add(id);
@@ -315,7 +308,7 @@ function renderVisibilityControls() {
 }
 
 function renderLayout() {
-  renderTeachingViews(activeCase, selectedId, visibleLayers, visibleEntities, selectEntity);
+  renderTeachingViews(activeCase, selectedIds, visibleLayers, visibleEntities, selectEntity);
 }
 
 function initializeVisibleLayers() {
@@ -324,24 +317,110 @@ function initializeVisibleLayers() {
 }
 
 function selectEntity(entityId) {
-  showPanel("objects");
-  selectedId = entityId;
-  scene.setSelection(entityId);
-  renderObjectList();
+  const group = objectGroups.find(item => item.ids.includes(entityId));
+  if (group) selectObject(group, entityId);
+}
+
+function applySelection(ids) {
+  selectedIds = new Set(ids);
+  scene.setSelection(selectedIds);
   renderLayout();
-  const entity = activeCase.entities.find((item) => item.id === entityId);
-  if (!entity) return;
-  elements.inspector.innerHTML = `
-    <h3>${entity.name}</h3>
-    <p>${entity.explanation}</p>
-    <dl class="metadata">
-      <div><dt>稳定 ID</dt><dd>${entity.id}</dd></div>
-      <div><dt>类型</dt><dd>${entity.type}</dd></div>
-      <div><dt>角色</dt><dd>${entity.role}</dd></div>
-      <div><dt>网络</dt><dd>${entity.net}</dd></div>
-      <div><dt>图层</dt><dd>${entity.layer}</dd></div>
-      <div><dt>来源</dt><dd>${activeCase.sourceLabel}</dd></div>
-    </dl>`;
+}
+
+function selectObject(group, entityId = null) {
+  showPanel("objects");
+  selectedGroupId = group.id;
+  cards = group.id === "poly" ? polyCards(activeCase, group) : [];
+  // 画布点击定位相应说明卡；侧栏点击始终回到完整对象组。
+  cardIndex = entityId && cards.length
+    ? Math.max(0, cards.findIndex((card, index) => index > 0 && card.ids.includes(entityId))) : 0;
+  applySelection(cards.length ? cards[cardIndex].ids : group.ids);
+  renderObjectList();
+  elements.inspector.replaceChildren();
+  const heading = document.createElement("h3");
+  heading.textContent = group.name;
+  const description = document.createElement("p");
+  description.textContent = group.explanation;
+  elements.inspector.append(heading, description);
+  if (cards.length) renderPolyCarousel();
+  const source = document.createElement("p");
+  source.className = "object-source";
+  source.textContent = `来源：${activeCase.sourceLabel}`;
+  elements.inspector.append(source);
+}
+
+function renderPolyCarousel() {
+  const carousel = document.createElement("section");
+  carousel.className = "poly-carousel";
+  carousel.tabIndex = 0;
+  carousel.setAttribute("aria-label", "多晶硅详情，滚轮或左右方向键循环切换");
+  const viewport = document.createElement("div");
+  viewport.className = "poly-card-viewport";
+  const card = document.createElement("article");
+  card.className = "poly-card";
+  card.setAttribute("aria-live", "polite");
+  const title = document.createElement("h4");
+  const note = document.createElement("p");
+  card.append(title, note);
+  viewport.append(card);
+  const navigation = document.createElement("div");
+  navigation.className = "poly-card-navigation";
+  const counter = document.createElement("span");
+  const previous = document.createElement("button");
+  const next = document.createElement("button");
+  for (const [button, text, label] of [[previous, "‹", "上一张多晶硅说明"], [next, "›", "下一张多晶硅说明"]]) {
+    button.type = "button";
+    button.className = "icon-button";
+    button.textContent = text;
+    button.setAttribute("aria-label", label);
+  }
+  navigation.append(previous, counter, next);
+  const hint = document.createElement("small");
+  hint.textContent = "滚轮切换 · 首尾循环";
+  carousel.append(viewport, navigation, hint);
+  elements.inspector.append(carousel);
+  const update = (direction = 0) => {
+    cardIndex = cycleCard(cardIndex, direction, cards.length);
+    title.textContent = cards[cardIndex].name;
+    note.textContent = cards[cardIndex].note;
+    counter.textContent = `${cardIndex + 1} / ${cards.length}`;
+    card.dataset.cardId = cards[cardIndex].id;
+    applySelection(cards[cardIndex].ids);
+    if (direction && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      card.getAnimations().forEach(animation => animation.cancel());
+      card.animate([{ opacity: 0, transform: `translateX(${Math.sign(direction) * 25}%)` },
+        { opacity: 1, transform: "translateX(0)" }], { duration: 200, easing: "ease-out" });
+    }
+  };
+  previous.addEventListener("click", () => update(-1));
+  next.addEventListener("click", () => update(1));
+  carousel.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    update(event.key === "ArrowRight" ? 1 : -1);
+  });
+  let lastWheel = -Infinity;
+  let wheelDistance = 0;
+  let wheelLocked = false;
+  carousel.addEventListener("wheel", event => {
+    // 仅说明卡区域接管滚轮；合并触控板的小增量，防止一次惯性滚动跳过多张卡片。
+    if (event.ctrlKey) return;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!delta) return;
+    event.preventDefault();
+    const now = performance.now();
+    if (now - lastWheel > 180) { wheelDistance = 0; wheelLocked = false; }
+    lastWheel = now;
+    if (wheelLocked) return;
+    const distance = delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? carousel.clientHeight : 1);
+    if (Math.sign(distance) !== Math.sign(wheelDistance)) wheelDistance = 0;
+    wheelDistance += distance;
+    if (Math.abs(wheelDistance) < 24) return;
+    update(Math.sign(wheelDistance));
+    wheelDistance = 0;
+    wheelLocked = true;
+  }, { passive: false });
+  update();
 }
 
 function renderCaseInspector() {

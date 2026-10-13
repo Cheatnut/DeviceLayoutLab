@@ -17,7 +17,7 @@ function text(parent, x, y, value, extra = {}) {
 function selectable(parent, id, selected, pick) {
   const entity = activeEntities.get(id);
   const color = entity?.color ?? "#536179";
-  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${id === selected ? "is-selected" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button" });
+  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${selected.has(id) ? "is-selected" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button", "aria-label": entity?.name ?? id, "aria-pressed": selected.has(id) });
   group.addEventListener("click", () => pick(id));
   group.addEventListener("keydown", e => { if (["Enter", " "].includes(e.key)) { e.preventDefault(); pick(id); } });
   return group;
@@ -52,8 +52,8 @@ function layout(svg, data, selected, layers, visibleEntities, pick) {
 
 function pins(svg, s, layers = null, visibleEntities = null) {
   if (!layers || layers.has("M1")) {
-    if (!visibleEntities || visibleEntities.has("metal-VDD")) text(svg, s.rails.VDD[0][0], s.rails.VDD[0][1]-12, "VDD");
-    if (!visibleEntities || visibleEntities.has("metal-GND")) text(svg, s.rails.GND[0][0], s.rails.GND[0][1]+22, "GND");
+    if (!visibleEntities || visibleEntities.has("rail-VDD")) text(svg, s.rails.VDD[0][0], s.rails.VDD[0][1]-12, "VDD");
+    if (!visibleEntities || visibleEntities.has("rail-GND")) text(svg, s.rails.GND[0][0], s.rails.GND[0][1]+22, "GND");
     if (!visibleEntities || visibleEntities.has("metal-Y")) {
       const out = s.wires.Y.at(-1).at(-1);
       text(svg, out[0]+9, out[1]+5, "Y");
@@ -83,16 +83,13 @@ function sticks(svg, data, selected, layers, visibleEntities, pick) {
     line(g, [[x,y+h/2],[x+w,y+h/2]], s.layers[active.layer].color, s.render.stickStroke);
     text(svg, x, y-3, active.id.toUpperCase(), { "font-size":11 });
   }
-  if (layers.has("POLY")) for (const gate of s.gates) {
-    if (!visibleEntities.has(gate.id)) continue;
-    const g = selectable(svg, gate.id, selected, pick);
-    line(g, [[gate.x,gate.top],[gate.x,gate.bottom]], s.layers.POLY.color, s.render.stickStroke);
-  }
-  if (layers.has("POLY")) for (const device of s.devices) {
-    if (!visibleEntities.has(device.id)) continue;
-    const group = selectable(svg, device.id, selected, pick);
-    node(group, "rect", { x: device.at[0]-16, y: device.at[1]-18, width: 32, height: 36,
-      fill: "transparent", stroke: "none" });
+  // 棍图沿用与版图相同的多晶硅分段，器件栅和输入连接段不再互相覆盖。
+  if (layers.has("POLY")) for (const entity of data.entities.filter(e => e.layer === "POLY")) {
+    if (!visibleEntities.has(entity.id)) continue;
+    const group = selectable(svg, entity.id, selected, pick);
+    for (const [x,y,width,height] of entity.rects) {
+      line(group, [[x+width/2,y],[x+width/2,y+height]], entity.color, s.render.stickStroke);
+    }
   }
   if (layers.has("M1")) for (const entity of data.entities.filter(e => e.paths && visibleEntities.has(e.id))) {
     const g = selectable(svg, entity.id, selected, pick);
@@ -106,7 +103,7 @@ function sticks(svg, data, selected, layers, visibleEntities, pick) {
   pins(svg,s,layers,visibleEntities);
 }
 
-/** 三端简化 MOS 符号：PMOS 栅端带圆圈，体端连接在卡片说明和对象面板中注明。 */
+/** 三端简化 MOS 符号：PMOS 栅端带圆圈，体端连接在对象说明卡中注明。 */
 function mos(svg, device, position, angle, selected, pick, ink) {
   const root = selectable(svg, device.id, selected, pick);
   root.setAttribute("aria-label", `${device.name} ${device.type}，栅 ${device.gate}`);
@@ -189,7 +186,7 @@ export function renderTeachingViews(data, selected, layers, visibleEntities, pic
     const svg=document.getElementById(id);
     svg.replaceChildren();
     svg.setAttribute("viewBox",(data.teaching?.viewBox ?? [0,0,420,330]).join(" "));
-    svg.classList.toggle("text-hidden", document.querySelector(`[data-diagram-text="${id}"]`)?.getAttribute("aria-pressed") === "false");
+    svg.classList.toggle("text-hidden", ids.indexOf(id) < 2 && document.querySelector(`[data-diagram-text="${id}"]`)?.getAttribute("aria-pressed") === "false");
     if(!data.teaching) text(svg,210,165,"此案例暂无版图数据",{"text-anchor":"middle"});
   }
   document.getElementById("logic-case-name").textContent = data.title ?? "案例";

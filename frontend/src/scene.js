@@ -33,7 +33,7 @@ export class TeachingScene {
     this.labelLeaders = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.labelLeaders.classList.add("model-label-leaders");
     this.labelOverlay.append(this.labelLeaders);
-    this.selectedId = null;
+    this.selectedIds = new Set();
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.layers = new Set(["M1", "M2", "VIA1"]);
@@ -68,7 +68,7 @@ export class TeachingScene {
     this.entityMeshes.clear();
     for (const label of this.labels.values()) label.remove();
     this.labels.clear();
-    this.selectedId = null;
+    this.selectedIds = new Set();
     this.spec = caseData.teaching;
     const entities = caseData.entities ?? [];
     if (this.spec) {
@@ -133,15 +133,16 @@ export class TeachingScene {
     this.render();
   }
 
-  setSelection(entityId) {
-    this.selectedId = entityId;
+  setSelection(entityIds) {
+    this.selectedIds = new Set(entityIds);
     for (const [id, mesh] of this.entityMeshes) {
+      const selected = this.selectedIds.has(id);
       mesh.traverse(child => {
         if (!child.material) return;
-        child.material.emissive.set(id === entityId ? "#1c4e9a" : "#000000");
-        child.material.emissiveIntensity = id === entityId ? 0.55 : 0;
+        child.material.emissive.set(selected ? "#1c4e9a" : "#000000");
+        child.material.emissiveIntensity = selected ? 0.55 : 0;
       });
-      this.labels.get(id)?.classList.toggle("selected", id === entityId);
+      this.labels.get(id)?.classList.toggle("selected", selected);
     }
     this.render();
   }
@@ -195,7 +196,7 @@ export class TeachingScene {
       const point = bounds.getCenter(new THREE.Vector3());
       point.y = bounds.max.y;
       point.project(this.camera);
-      const visible = this.labelsVisible && mesh.visible && (label.dataset.defaultVisible === "true" || id === this.selectedId)
+      const visible = this.labelsVisible && mesh.visible && (label.dataset.defaultVisible === "true" || this.selectedIds.has(id))
         && point.z >= -1 && point.z <= 1 && Math.abs(point.x) <= 1 && Math.abs(point.y) <= 1;
       label.hidden = !visible;
       if (!visible) continue;
@@ -219,7 +220,7 @@ export class TeachingScene {
         const end = side === 0 ? x + item.label.offsetWidth + 3 : x - 3;
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", `M ${item.x} ${item.y} L ${end} ${y + 8}`);
-        path.classList.toggle("selected", item.id === this.selectedId);
+        path.classList.toggle("selected", this.selectedIds.has(item.id));
         this.labelLeaders.append(path);
       }
     });
