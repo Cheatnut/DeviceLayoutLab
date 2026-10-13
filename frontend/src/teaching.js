@@ -195,7 +195,6 @@ export function renderTeachingViews(data, selected, layers, visibleEntities, pic
   document.getElementById("logic-case-name").textContent = data.title ?? "案例";
   document.getElementById("logic-kind").textContent = data.teaching?.kind === "NAND2" ? "与非门" : "非门";
   renderLogicFormula(document.getElementById("logic-formula"), data.teaching?.formula ?? "等待案例数据");
-  document.getElementById("logic-note").textContent = data.teaching?.logicNote ?? "";
   if(!data.teaching) return;
   layout(document.getElementById(ids[0]),data,selected,layers,visibleEntities,pick);
   sticks(document.getElementById(ids[1]),data,selected,layers,visibleEntities,pick);

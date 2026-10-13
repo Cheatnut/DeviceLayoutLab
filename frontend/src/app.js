@@ -23,7 +23,7 @@ const visibleLayers = new Set();
 const visibleEntities = new Set();
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
 
-// 左栏切换对象选择与工艺库；右栏对象说明、对象可见性和材料图层控制始终独立保留。
+// 左栏切换对象选择与工艺库；右栏保留对象说明和合并后的材料与图层可见性控制。
 function showPanel(panel) {
   const isLibrary = panel === "library";
   document.querySelector("#objects-section").hidden = isLibrary;
@@ -186,7 +186,7 @@ async function loadCase(caseId) {
   elements.sourceBadge.textContent = activeCase.sourceLabel;
   elements.sourceBadge.className = `source-badge ${activeCase.sourceKind}`;
   renderVisibilityControls();
-  renderLayerControls();
+  initializeVisibleLayers();
   renderObjectList();
   scene.setCase(activeCase);
   scene.setLayers(visibleLayers);
@@ -197,25 +197,24 @@ async function loadCase(caseId) {
 
 function renderObjectList() {
   elements.objectList.replaceChildren();
-  const entities = (activeCase.entities ?? []).filter(entity => entity.list !== false);
-  if (entities.length === 0) {
+  const groups = visibilityGroups(activeCase.entities ?? []);
+  if (groups.length === 0) {
     elements.objectList.textContent = "该案例暂无可选对象。";
     return;
   }
-  for (const entity of entities) {
+  for (const group of groups) {
     const button = document.createElement("button");
-    button.className = `object-button ${entity.id === selectedId ? "selected" : ""}`;
+    button.className = `object-button ${group.ids.includes(selectedId) ? "selected" : ""}`;
     button.type = "button";
-    button.dataset.entityId = entity.id;
+    button.dataset.entityId = group.ids[0] ?? "";
+    button.disabled = group.ids.length === 0;
     const name = document.createElement("strong");
-    name.textContent = entity.name;
+    name.textContent = group.name;
     button.append(name);
-    if (entity.role && entity.role !== entity.name) {
-      const role = document.createElement("small");
-      role.textContent = entity.role;
-      button.append(role);
-    }
-    button.addEventListener("click", () => selectEntity(entity.id));
+    const note = document.createElement("small");
+    note.textContent = group.note;
+    button.append(note);
+    button.addEventListener("click", () => selectEntity(group.ids[0]));
     elements.objectList.append(button);
   }
 }
@@ -242,9 +241,32 @@ function visibilityGroups(entities) {
 function renderVisibilityControls() {
   const controls = elements.visibilityControls;
   controls.replaceChildren();
-  const heading = document.createElement("p");
+  const heading = document.createElement("div");
   heading.className = "visibility-heading";
-  heading.textContent = "显示对象";
+  const title = document.createElement("p");
+  title.textContent = "材料与图层";
+  const actions = document.createElement("div");
+  actions.className = "layer-control-actions";
+  for (const action of [
+    { id: "all", title: "全选对象", label: "全选对象", path: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" },
+    { id: "invert", title: "反选对象", label: "反选对象", path: "M5 5h6v6H5zM13 13h6v6h-6zM16 4l4 4m0-4-4 4M4 16l4 4m0-4-4 4" },
+  ]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tool-button layer-action";
+    button.dataset.visibilityAction = action.id;
+    button.title = action.title;
+    button.setAttribute("aria-label", action.label);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    shape.setAttribute("d", action.path);
+    svg.append(shape);
+    button.append(svg);
+    actions.append(button);
+  }
+  heading.append(title, actions);
   controls.append(heading);
   const entities = activeCase.entities ?? [];
   const groups = visibilityGroups(entities);
@@ -257,6 +279,7 @@ function renderVisibilityControls() {
     input.type = "checkbox";
     input.checked = group.ids.length > 0;
     input.disabled = group.ids.length === 0;
+    input.dataset.visibilityGroup = group.ids.join(",");
     input.setAttribute("aria-label", `显示${group.name}`);
     const text = document.createElement("span");
     text.className = "visibility-entry-text";
@@ -276,78 +299,28 @@ function renderVisibilityControls() {
       renderLayout();
     });
   }
+  actions.addEventListener("click", event => {
+    const button = event.target.closest("[data-visibility-action]");
+    if (!button) return;
+    for (const input of controls.querySelectorAll("input[data-visibility-group]")) {
+      input.checked = button.dataset.visibilityAction === "all" ? true : !input.checked;
+      for (const id of input.dataset.visibilityGroup.split(",").filter(Boolean)) {
+        if (input.checked) visibleEntities.add(id);
+        else visibleEntities.delete(id);
+      }
+    }
+    scene.setEntityVisibility(visibleEntities);
+    renderLayout();
+  });
 }
 
 function renderLayout() {
   renderTeachingViews(activeCase, selectedId, visibleLayers, visibleEntities, selectEntity);
 }
 
-function renderLayerControls() {
-  const controls = document.querySelector("#layer-controls");
-  controls.replaceChildren();
+function initializeVisibleLayers() {
   visibleLayers.clear();
-  const heading = document.createElement("div");
-  heading.className = "layer-controls-heading";
-  const title = document.createElement("p");
-  title.textContent = "材料与图层";
-  const actions = document.createElement("div");
-  actions.className = "layer-control-actions";
-  for (const action of [
-    { id: "all", title: "全选图层", label: "全选图层", path: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" },
-    { id: "invert", title: "反选图层", label: "反选图层", path: "M5 5h6v6H5zM13 13h6v6h-6zM16 4l4 4m0-4-4 4M4 16l4 4m0-4-4 4" },
-  ]) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "tool-button layer-action";
-    button.dataset.layerAction = action.id;
-    button.title = action.title;
-    button.setAttribute("aria-label", action.label);
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("aria-hidden", "true");
-    const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    shape.setAttribute("d", action.path);
-    svg.append(shape);
-    button.append(svg);
-    actions.append(button);
-  }
-  heading.append(title, actions);
-  controls.append(heading);
-  for (const [id, layer] of Object.entries(activeCase.teaching?.layers ?? {})) {
-    visibleLayers.add(id);
-    const label = document.createElement("label");
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = true;
-    input.dataset.layer = id;
-    label.className = "layer-entry";
-    const swatch = document.createElement("i");
-    swatch.className = "material-swatch";
-    swatch.style.background = layer.color;
-    const name = document.createElement("span");
-    name.className = "layer-entry-name";
-    name.append(input, swatch, document.createTextNode(layer.name));
-    label.append(name);
-    controls.append(label);
-    input.addEventListener("change", () => {
-      if (input.checked) visibleLayers.add(id);
-      else visibleLayers.delete(id);
-      scene.setLayers(visibleLayers);
-      renderLayout();
-    });
-  }
-  actions.addEventListener("click", event => {
-    const button = event.target.closest("[data-layer-action]");
-    if (!button) return;
-    const inputs = [...controls.querySelectorAll("input[data-layer]")];
-    for (const input of inputs) {
-      input.checked = button.dataset.layerAction === "all" ? true : !input.checked;
-      if (input.checked) visibleLayers.add(input.dataset.layer);
-      else visibleLayers.delete(input.dataset.layer);
-    }
-    scene.setLayers(visibleLayers);
-    renderLayout();
-  });
+  for (const id of Object.keys(activeCase.teaching?.layers ?? {})) visibleLayers.add(id);
 }
 
 function selectEntity(entityId) {

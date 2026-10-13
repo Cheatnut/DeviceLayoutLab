@@ -60,10 +60,13 @@
         </aside>
 
         <section class="view-grid" aria-label="二维和三维联动工作台">
-          <article class="logic-banner panel" aria-label="案例逻辑功能">
-            <div class="logic-banner-title"><strong id="logic-case-name"></strong><span id="logic-kind"></span></div>
-            <strong id="logic-formula" class="logic-formula"></strong>
-            <span id="logic-note" class="logic-note"></span>
+          <article class="logic-banner" aria-label="案例逻辑功能">
+            <h2 id="logic-kind" class="logic-kind"></h2>
+            <div class="logic-summary">
+              <span id="logic-case-name" class="logic-case-name"></span>
+              <span class="logic-expression-label">逻辑表达式</span>
+              <strong id="logic-formula" class="logic-formula"></strong>
+            </div>
           </article>
           <section class="derivation-grid" aria-label="从版图到电路的四步对照">
             <article class="view-panel panel" id="layout-panel">
@@ -73,17 +76,14 @@
             <article class="view-panel panel">
               <div class="panel-heading"><h2><b class="step-number">02</b> 棍图</h2><button class="tool-button diagram-text-toggle" type="button" data-diagram-text="stick-view" aria-pressed="true" aria-label="隐藏棍图文字" title="隐藏文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8" /></svg></button></div>
               <svg id="stick-view" class="teaching-diagram" role="img" aria-label="对应单元的棍图"></svg>
-              <p class="diagram-caption">方点表示接触；跨层交叉无接触则不相连</p>
             </article>
             <article class="view-panel panel">
               <div class="panel-heading"><h2><b class="step-number">03</b> 位置对应电路</h2><button class="tool-button diagram-text-toggle" type="button" data-diagram-text="positional-view" aria-pressed="true" aria-label="隐藏位置对应电路文字" title="隐藏文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8" /></svg></button></div>
               <svg id="positional-view" class="teaching-diagram" role="img" aria-label="保持版图器件位置的电路图"></svg>
-              <p class="diagram-caption">保持器件位置；弧线跨越不连接，圆点表示连接</p>
             </article>
             <article class="view-panel panel">
               <div class="panel-heading"><h2><b class="step-number">04</b> 整理后的电路</h2><button class="tool-button diagram-text-toggle" type="button" data-diagram-text="circuit-view" aria-pressed="true" aria-label="隐藏整理后电路文字" title="隐藏文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8" /></svg></button></div>
               <svg id="circuit-view" class="teaching-diagram" role="img" aria-label="标准串并联 CMOS 电路图"></svg>
-              <p class="diagram-caption">简化三端符号：PMOS 体接 VDD，NMOS 体接 GND</p>
             </article>
           </section>
           <article class="view-panel panel" id="model-panel">
@@ -121,7 +121,6 @@
               </div>
               <div id="library-detail" class="inspector-content" aria-live="polite" hidden></div>
               <div id="visibility-controls" class="visibility-controls" aria-label="对象可见性"></div>
-              <div id="layer-controls" class="layer-controls" aria-label="材料与工艺图层"></div>
             </div>
           </div>
         </aside>
