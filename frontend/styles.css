@@ -127,12 +127,13 @@ input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offse
 .diagram-note { fill: #7387a0; font-size: 12px; }
 .diagram-part { cursor: pointer; outline: none; }
 .diagram-part:hover { filter: brightness(.93); }
-.diagram-part.is-selected > rect, .diagram-part:focus-visible > rect { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
-.diagram-part.is-selected polyline, .diagram-part.is-selected path, .diagram-part.is-selected circle { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.diagram-part:not(.stick-part).is-selected > rect, .diagram-part:not(.stick-part):focus-visible > rect { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.diagram-part:not(.stick-part).is-selected polyline, .diagram-part:not(.stick-part).is-selected path, .diagram-part:not(.stick-part).is-selected circle { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.stick-selection-outline { stroke: var(--selection-color); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
 .diagram-part:focus-visible { filter: drop-shadow(0 0 2px var(--selection-color)); }
-.logic-banner { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 66px; padding: 4px 4px 8px; }
+.logic-banner { display: flex; align-items: center; justify-content: flex-start; gap: 22px; min-height: 66px; padding: 4px 4px 8px; }
 .logic-kind { margin: 0; color: #141b25; font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 1.45rem; font-weight: 800; letter-spacing: -.04em; }
-.logic-summary { display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; color: #78879a; font-size: .84rem; }
+.logic-summary { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 8px 14px; color: #78879a; font-size: .84rem; }
 .logic-case-name, .logic-expression-label { color: #78879a; font-weight: 600; }
 .logic-expression-label { padding-left: 14px; border-left: 1px solid #d7e2ef; }
 .logic-formula { color: #687b92; font-size: .95rem; font-weight: 700; letter-spacing: .02em; }

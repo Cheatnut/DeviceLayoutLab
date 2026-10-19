@@ -14,13 +14,25 @@ function line(parent, points, color, width = 2, extra = {}) {
 function text(parent, x, y, value, extra = {}) {
   return node(parent, "text", { x, y, class: "diagram-text", ...extra }, value);
 }
-function selectable(parent, id, selected, pick) {
+function selectable(parent, id, selected, pick, variant = "") {
   const entity = activeEntities.get(id);
   const color = entity?.color ?? "#536179";
-  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${selected.has(id) ? "is-selected" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button", "aria-label": entity?.name ?? id, "aria-pressed": selected.has(id) });
+  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${variant} ${selected.has(id) ? "is-selected" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button", "aria-label": entity?.name ?? id, "aria-pressed": selected.has(id) });
   group.addEventListener("click", () => pick(id));
   group.addEventListener("keydown", e => { if (["Enter", " "].includes(e.key)) { e.preventDefault(); pick(id); } });
   return group;
+}
+function stickSelectionOutline(group) {
+  // 棍图中的线段本身保留材料色；选中时以包围全部几何的轮廓说明对象范围。
+  // 契约测试使用的轻量 SVG 替身不提供 getBBox；真实浏览器始终会提供该接口。
+  if (typeof group.getBBox !== "function") return;
+  const { x, y, width, height } = group.getBBox();
+  const padding = 5;
+  const outline = node(group, "rect", {
+    x: x - padding, y: y - padding, width: width + padding * 2, height: height + padding * 2,
+    rx: 3, fill: "none", class: "stick-selection-outline", "pointer-events": "none"
+  });
+  group.insertBefore(outline, group.firstChild);
 }
 function darken(color) {
   // 选中框保留对象色相，只降低明度；颜色来源始终是当前案例的材料色表。
@@ -67,10 +79,12 @@ function pins(svg, s, layers = null, visibleEntities = null) {
 
 function sticks(svg, data, selected, layers, visibleEntities, pick) {
   const s = data.teaching;
+  const selectedStickGroups = [];
   for (const id of ["substrate", "field", "nwell"]) {
     const entity = activeEntities.get(id);
     if (!entity || !layers.has(entity.layer) || !visibleEntities.has(id)) continue;
-    const group = selectable(svg, id, selected, pick);
+    const group = selectable(svg, id, selected, pick, "stick-part");
+    if (selected.has(id)) selectedStickGroups.push(group);
     for (const [x,y,width,height] of entity.rects) {
       node(group, "rect", { x, y, width, height, fill: "none", stroke: id === "nwell" ? entity.color : "none",
         "stroke-dasharray": id === "nwell" ? "5 4" : "none" });
@@ -79,27 +93,32 @@ function sticks(svg, data, selected, layers, visibleEntities, pick) {
   for (const active of [...s.active, ...s.taps]) {
     if (!layers.has(active.layer) || !visibleEntities.has(active.id)) continue;
     const [x,y,w,h] = active.rect;
-    const g = selectable(svg, active.id, selected, pick);
+    const g = selectable(svg, active.id, selected, pick, "stick-part");
+    if (selected.has(active.id)) selectedStickGroups.push(g);
     line(g, [[x,y+h/2],[x+w,y+h/2]], s.layers[active.layer].color, s.render.stickStroke);
     text(svg, x, y-3, active.id.toUpperCase(), { "font-size":11 });
   }
   // 棍图沿用与版图相同的多晶硅分段，器件栅和输入连接段不再互相覆盖。
   if (layers.has("POLY")) for (const entity of data.entities.filter(e => e.layer === "POLY")) {
     if (!visibleEntities.has(entity.id)) continue;
-    const group = selectable(svg, entity.id, selected, pick);
+    const group = selectable(svg, entity.id, selected, pick, "stick-part");
+    if (selected.has(entity.id)) selectedStickGroups.push(group);
     for (const [x,y,width,height] of entity.rects) {
       line(group, [[x+width/2,y],[x+width/2,y+height]], entity.color, s.render.stickStroke);
     }
   }
   if (layers.has("M1")) for (const entity of data.entities.filter(e => e.paths && visibleEntities.has(e.id))) {
-    const g = selectable(svg, entity.id, selected, pick);
+    const g = selectable(svg, entity.id, selected, pick, "stick-part");
+    if (selected.has(entity.id)) selectedStickGroups.push(g);
     for (const path of entity.paths) line(g, path, entity.color, s.render.stickStroke);
   }
   if (layers.has("CONTACT")) for (const [net, points] of Object.entries(s.contacts)) {
     if (!visibleEntities.has(`contact-${net}`)) continue;
-    const g = selectable(svg, `contact-${net}`, selected, pick);
+    const g = selectable(svg, `contact-${net}`, selected, pick, "stick-part");
+    if (selected.has(`contact-${net}`)) selectedStickGroups.push(g);
     for (const [x,y] of points) node(g,"rect",{x:x-3.5,y:y-3.5,width:7,height:7,fill:s.layers.CONTACT.color});
   }
+  for (const group of selectedStickGroups) stickSelectionOutline(group);
   pins(svg,s,layers,visibleEntities);
 }
 
