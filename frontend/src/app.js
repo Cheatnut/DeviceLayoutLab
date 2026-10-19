@@ -1,6 +1,5 @@
 import { renderTeachingViews } from "./teaching.js";
 import { TeachingScene } from "./scene.js";
-import { initializeLibrary } from "./library.js";
 import { teachingObjects, polyCards, cycleCard } from "./objects.js";
 
 const elements = {
@@ -27,19 +26,16 @@ let caseRequestVersion = 0;
 const visibleLayers = new Set();
 const visibleEntities = new Set();
 const scene = new TeachingScene(document.querySelector("#model-view"), selectEntity);
-
-// 左栏切换对象选择与工艺库；右栏保留对象说明和合并后的材料与图层可见性控制。
-function showPanel(panel) {
-  const isLibrary = panel === "library";
-  document.querySelector("#objects-section").hidden = isLibrary;
-  document.querySelector("#library-section").hidden = !isLibrary;
-  elements.inspector.hidden = isLibrary;
-  document.querySelector("#library-detail").hidden = !isLibrary;
-  document.querySelector("#inspector-title").textContent = isLibrary ? "库单元说明" : "对象说明";
-  document.querySelectorAll("[data-panel]").forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.panel === panel));
-  });
-}
+const TOUR_INTERVAL_MS = 1000;
+const tour = { active: false, playing: false, index: -1, timer: null };
+let pendingRevealIds = null;
+const tourButtons = {
+  play: document.querySelector("#tour-play"),
+  restart: document.querySelector("#tour-restart"),
+  pause: document.querySelector("#tour-pause"),
+  previous: document.querySelector("#tour-previous"),
+  next: document.querySelector("#tour-next"),
+};
 
 function setSidebarCollapsed(collapsed) {
   document.querySelector(".workspace").classList.toggle("sidebar-collapsed", collapsed);
@@ -120,12 +116,119 @@ document.addEventListener("keydown", (event) => {
     if (!event.repeat) (shortcut === "b" ? toggleSidebar : toggleInspector)();
   }
 });
-document.querySelectorAll("[data-panel]").forEach((button) => {
-  button.addEventListener("click", () => {
-    showPanel(button.dataset.panel);
-    setSidebarCollapsed(false);
-  });
-});
+document.querySelector("[data-panel='objects']").addEventListener("click", () => setSidebarCollapsed(false));
+tourButtons.play.addEventListener("click", playTour);
+tourButtons.restart.addEventListener("click", restartTour);
+tourButtons.pause.addEventListener("click", pauseTour);
+tourButtons.previous.addEventListener("click", () => stepTour(-1));
+tourButtons.next.addEventListener("click", () => stepTour(1));
+
+function tourGroups() {
+  return objectGroups.filter(group => group.ids.length > 0);
+}
+
+function stopTourTimer() {
+  if (tour.timer !== null) clearTimeout(tour.timer);
+  tour.timer = null;
+}
+
+function updateTourControls() {
+  const groups = activeCase?.teaching ? tourGroups() : [];
+  const available = groups.length > 0;
+  tourButtons.play.disabled = !available || tour.playing;
+  tourButtons.restart.disabled = !available;
+  tourButtons.pause.disabled = !tour.playing;
+  tourButtons.pause.setAttribute("aria-pressed", String(tour.playing));
+  tourButtons.previous.disabled = !tour.active || tour.index <= 0;
+  tourButtons.next.disabled = !available || (tour.active && tour.index >= groups.length - 1);
+  document.querySelector("#tour-status").textContent = tour.active
+    ? `第 ${tour.index + 1} / ${groups.length} 步：${groups[tour.index]?.name ?? ""}`
+    : "";
+}
+
+function exitTour() {
+  stopTourTimer();
+  tour.active = false;
+  tour.playing = false;
+  tour.index = -1;
+  pendingRevealIds = null;
+  updateTourControls();
+}
+
+function prepareTour() {
+  if (!activeCase?.teaching || !tourGroups().length) return false;
+  // 逐步讲解需要右栏可见，展开后才能看到当前对象对应的说明。
+  if (document.querySelector("#inspector-toggle").getAttribute("aria-expanded") === "false") toggleInspector();
+  // 演示从完整对象集开始，保证此前关闭的图层不会导致某一步看不到对象。
+  visibleEntities.clear();
+  for (const entity of activeCase.entities ?? []) visibleEntities.add(entity.id);
+  for (const input of elements.visibilityControls.querySelectorAll("input[data-visibility-group]")) {
+    input.checked = !input.disabled;
+  }
+  scene.setEntityVisibility(visibleEntities);
+  tour.active = true;
+  return true;
+}
+
+function showTourStep(index) {
+  const group = tourGroups()[index];
+  if (!group) return;
+  tour.index = index;
+  pendingRevealIds = new Set(group.ids);
+  selectObject(group, null, true);
+  document.querySelector(".inspector").scrollTop = 0;
+  updateTourControls();
+}
+
+function scheduleTourStep() {
+  stopTourTimer();
+  if (!tour.playing) return;
+  tour.timer = setTimeout(() => {
+    tour.timer = null;
+    const nextIndex = tour.index + 1;
+    if (nextIndex >= tourGroups().length) {
+      tour.playing = false;
+      updateTourControls();
+      return;
+    }
+    showTourStep(nextIndex);
+    scheduleTourStep();
+  }, TOUR_INTERVAL_MS);
+}
+
+function playTour() {
+  if (!activeCase?.teaching || tour.playing) return;
+  if (!tour.active || tour.index >= tourGroups().length - 1) {
+    if (!prepareTour()) return;
+    showTourStep(0);
+  }
+  tour.playing = tour.index < tourGroups().length - 1;
+  updateTourControls();
+  scheduleTourStep();
+}
+
+function restartTour() {
+  stopTourTimer();
+  tour.playing = false;
+  if (!prepareTour()) return;
+  showTourStep(0);
+  tour.playing = tourGroups().length > 1;
+  updateTourControls();
+  scheduleTourStep();
+}
+
+function pauseTour() {
+  stopTourTimer();
+  tour.playing = false;
+  updateTourControls();
+}
+
+function stepTour(direction) {
+  pauseTour();
+  if (!tour.active && !prepareTour()) return;
+  const nextIndex = Math.min(tourGroups().length - 1, Math.max(0, tour.index + direction));
+  if (nextIndex !== tour.index) showTourStep(nextIndex);
+}
 
 async function boot() {
   try {
@@ -162,6 +265,7 @@ function populateGroupCases() {
 
 async function loadCase(caseId) {
   const version = ++caseRequestVersion;
+  pauseTour();
   let loaded;
   try {
     loaded = await requestJson(`/api/cases/${encodeURIComponent(caseId)}`);
@@ -181,6 +285,7 @@ async function loadCase(caseId) {
   }
   // 快速切换时只应用最后一次请求，较晚返回的旧请求不得覆盖新场景。
   if (version !== caseRequestVersion) return;
+  exitTour();
   activeCase = loaded;
   selectedGroupId = null;
   selectedIds = new Set();
@@ -202,6 +307,7 @@ async function loadCase(caseId) {
   scene.setEntityVisibility(visibleEntities);
   renderLayout();
   renderCaseInspector();
+  updateTourControls();
 }
 
 function renderObjectList() {
@@ -283,6 +389,7 @@ function renderVisibilityControls() {
     label.append(input, text);
     controls.append(label);
     input.addEventListener("change", () => {
+      if (tour.active) exitTour();
       for (const id of group.ids) {
         if (input.checked) visibleEntities.add(id);
         else visibleEntities.delete(id);
@@ -294,6 +401,7 @@ function renderVisibilityControls() {
   actions.addEventListener("click", event => {
     const button = event.target.closest("[data-visibility-action]");
     if (!button) return;
+    if (tour.active) exitTour();
     for (const input of controls.querySelectorAll("input[data-visibility-group]")) {
       if (input.disabled) continue;
       input.checked = button.dataset.visibilityAction === "all" ? true : !input.checked;
@@ -308,7 +416,12 @@ function renderVisibilityControls() {
 }
 
 function renderLayout() {
-  renderTeachingViews(activeCase, selectedIds, visibleLayers, visibleEntities, selectEntity);
+  const shown = tour.active
+    ? new Set(tourGroups().slice(0, tour.index + 1).flatMap(group => group.ids))
+    : visibleEntities;
+  const revealIds = pendingRevealIds ?? new Set();
+  pendingRevealIds = null;
+  renderTeachingViews(activeCase, selectedIds, visibleLayers, shown, selectEntity, revealIds);
 }
 
 function initializeVisibleLayers() {
@@ -327,8 +440,8 @@ function applySelection(ids) {
   renderLayout();
 }
 
-function selectObject(group, entityId = null) {
-  showPanel("objects");
+function selectObject(group, entityId = null, fromTour = false) {
+  if (!fromTour && tour.active) exitTour();
   selectedGroupId = group.id;
   cards = group.id === "poly" ? polyCards(activeCase, group) : [];
   // 画布点击定位相应说明卡；侧栏点击始终回到完整对象组。
@@ -380,12 +493,13 @@ function renderPolyCarousel() {
   carousel.append(viewport, navigation, hint);
   elements.inspector.append(carousel);
   const update = (direction = 0) => {
+    if (direction && tour.active) exitTour();
     cardIndex = cycleCard(cardIndex, direction, cards.length);
     title.textContent = cards[cardIndex].name;
     note.textContent = cards[cardIndex].note;
     counter.textContent = `${cardIndex + 1} / ${cards.length}`;
     card.dataset.cardId = cards[cardIndex].id;
-    applySelection(cards[cardIndex].ids);
+    if (direction) applySelection(cards[cardIndex].ids);
     if (direction && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       card.getAnimations().forEach(animation => animation.cancel());
       card.animate([{ opacity: 0, transform: `translateX(${Math.sign(direction) * 25}%)` },
@@ -459,5 +573,5 @@ function safeParse(text) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+updateTourControls();
 boot();
-initializeLibrary(requestJson);

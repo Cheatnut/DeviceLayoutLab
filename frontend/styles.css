@@ -18,6 +18,7 @@
 html { scrollbar-gutter: stable; }
 html.page-pinned, html.page-pinned body { overflow: hidden; }
 [hidden] { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 body {
   margin: 0;
   min-width: 760px;
@@ -130,13 +131,22 @@ input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offse
 .diagram-part:not(.stick-part).is-selected > rect, .diagram-part:not(.stick-part):focus-visible > rect { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .diagram-part:not(.stick-part).is-selected polyline, .diagram-part:not(.stick-part).is-selected path, .diagram-part:not(.stick-part).is-selected circle { stroke: var(--selection-color); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .stick-selection-outline { stroke: var(--selection-color); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
+.stick-part.is-selected > polyline { stroke: var(--selection-color); }
+.stick-part.is-selected > rect:not(.stick-selection-outline)[fill]:not([fill="none"]) { fill: var(--selection-color); }
+.stick-part.is-selected > rect:not(.stick-selection-outline)[stroke]:not([stroke="none"]) { stroke: var(--selection-color); }
+.teaching-diagram .is-revealing { animation: diagram-reveal .48s ease-out both; }
+@keyframes diagram-reveal { from { opacity: 0; } to { opacity: 1; } }
 .diagram-part:focus-visible { filter: drop-shadow(0 0 2px var(--selection-color)); }
-.logic-banner { display: flex; align-items: center; justify-content: flex-start; gap: 22px; min-height: 66px; padding: 4px 4px 8px; }
-.logic-kind { margin: 0; color: #141b25; font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 1.45rem; font-weight: 800; letter-spacing: -.04em; }
-.logic-summary { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 8px 14px; color: #78879a; font-size: .84rem; }
-.logic-case-name, .logic-expression-label { color: #78879a; font-weight: 600; }
-.logic-expression-label { padding-left: 14px; border-left: 1px solid #d7e2ef; }
-.logic-formula { color: #687b92; font-size: .95rem; font-weight: 700; letter-spacing: .02em; }
+.logic-banner { display: flex; align-items: center; gap: 20px; min-height: 70px; padding: 4px 4px 8px; }
+.logic-kind { margin: 0; color: #141b25; font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 1.65rem; font-weight: 800; letter-spacing: -.04em; white-space: nowrap; }
+.logic-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; color: #78879a; font-size: 1rem; }
+.logic-case-name { color: #78879a; font-weight: 600; }
+.logic-formula { padding-left: 16px; border-left: 1px solid #d7e2ef; color: #687b92; font-size: 1.125rem; font-weight: 700; letter-spacing: .02em; }
+.tour-toolbar { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
+.tour-toolbar .tool-button { width: 34px; height: 34px; }
+.tour-toolbar .tool-button:disabled { color: #aab9cc; cursor: not-allowed; }
+.tour-toolbar .tool-button:disabled:hover { background: transparent; }
+.tour-toolbar #tour-pause[aria-pressed="true"] { background: #e4efff; border-color: #c4dafb; color: #2366c8; }
 .logic-overbar { display: inline-block; border-top: 1.5px solid currentColor; padding-top: 2px; line-height: 1; }
 .layout-grid { stroke: #dce7f6; stroke-width: .35; }
 .layout-row { fill: #eaf1fb; stroke: #b9cde7; stroke-width: .6; }
@@ -209,7 +219,10 @@ input[type="checkbox"]:focus-visible { outline: 2px solid #7bafff; outline-offse
   .workspace { --sidebar-width: 174px; --inspector-width: 230px; gap: 12px; }
   .inspector-content { padding: 14px; }
   .case-picker > label { display: none; }
+  .logic-banner { flex-wrap: wrap; gap: 10px 16px; }
+  .tour-toolbar { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
+  .teaching-diagram .is-revealing { animation: none; }
 }

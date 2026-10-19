@@ -42,18 +42,11 @@
           </div>
           <nav class="sidebar-nav" aria-label="选择面板">
             <button type="button" data-panel="objects" aria-pressed="true" aria-controls="objects-section" aria-label="对象" title="对象"><span aria-hidden="true">▱</span><span class="nav-label">对象</span></button>
-            <button type="button" data-panel="library" aria-pressed="false" aria-controls="library-section" aria-label="工艺库" title="工艺库"><span aria-hidden="true">▦</span><span class="nav-label">工艺库</span></button>
           </nav>
           <div id="sidebar-content">
             <div class="sidebar-body">
               <section id="objects-section" aria-label="选择对象">
                 <div id="object-list" class="object-list" aria-label="对象列表"></div>
-              </section>
-              <section id="library-section" class="library-browser" aria-label="工艺库" hidden>
-                <label for="library-pdk">已登记工艺</label>
-                <select id="library-pdk" aria-label="选择工艺库"></select>
-                <p id="library-status" aria-live="polite">正在检查工艺库…</p>
-                <div id="library-cells"></div>
               </section>
             </div>
           </div>
@@ -64,8 +57,25 @@
             <h2 id="logic-kind" class="logic-kind"></h2>
             <div class="logic-summary">
               <span id="logic-case-name" class="logic-case-name"></span>
-              <span class="logic-expression-label">逻辑表达式</span>
               <strong id="logic-formula" class="logic-formula"></strong>
+            </div>
+            <div class="tour-toolbar" role="group" aria-label="版图逐步演示">
+              <button id="tour-play" class="tool-button" type="button" aria-label="播放" title="播放">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z" /></svg>
+              </button>
+              <button id="tour-restart" class="tool-button" type="button" aria-label="重来" title="重来">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.2 6M4 5v6h6" /></svg>
+              </button>
+              <button id="tour-pause" class="tool-button" type="button" aria-label="暂停" title="暂停">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14m8-14v14" /></svg>
+              </button>
+              <button id="tour-previous" class="tool-button" type="button" aria-label="上一步" title="上一步">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14m11-14L9 12l9 7z" /></svg>
+              </button>
+              <button id="tour-next" class="tool-button" type="button" aria-label="下一步" title="下一步">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 5 9 7-9 7zM17 5v14" /></svg>
+              </button>
+              <span id="tour-status" class="visually-hidden" role="status" aria-live="polite"></span>
             </div>
           </article>
           <section class="derivation-grid" aria-label="从版图到电路的四步对照">
@@ -119,7 +129,6 @@
               <div id="inspector-content" class="inspector-content">
                 <p>选择二维或三维对象，查看其来源、角色和教学边界。</p>
               </div>
-              <div id="library-detail" class="inspector-content" aria-live="polite" hidden></div>
               <div id="visibility-controls" class="visibility-controls" aria-label="对象可见性"></div>
             </div>
           </div>

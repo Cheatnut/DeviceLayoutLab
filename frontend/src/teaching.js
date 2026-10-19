@@ -14,10 +14,10 @@ function line(parent, points, color, width = 2, extra = {}) {
 function text(parent, x, y, value, extra = {}) {
   return node(parent, "text", { x, y, class: "diagram-text", ...extra }, value);
 }
-function selectable(parent, id, selected, pick, variant = "") {
+function selectable(parent, id, selected, pick, variant = "", revealing = false) {
   const entity = activeEntities.get(id);
   const color = entity?.color ?? "#536179";
-  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${variant} ${selected.has(id) ? "is-selected" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button", "aria-label": entity?.name ?? id, "aria-pressed": selected.has(id) });
+  const group = node(parent, "g", { "data-entity-id": id, class: `diagram-part ${variant} ${selected.has(id) ? "is-selected" : ""} ${revealing ? "is-revealing" : ""}`, "style": `--selection-color:${darken(color)}`, tabindex: 0, role: "button", "aria-label": entity?.name ?? id, "aria-pressed": selected.has(id) });
   group.addEventListener("click", () => pick(id));
   group.addEventListener("keydown", e => { if (["Enter", " "].includes(e.key)) { e.preventDefault(); pick(id); } });
   return group;
@@ -40,11 +40,11 @@ function darken(color) {
   return `#${channel(color.slice(1,3))}${channel(color.slice(3,5))}${channel(color.slice(5,7))}`;
 }
 
-function layout(svg, data, selected, layers, visibleEntities, pick) {
+function layout(svg, data, selected, layers, visibleEntities, pick, revealIds) {
   const s = data.teaching;
   for (const entity of data.entities) {
     if (entity.planar === false || !layers.has(entity.layer) || !visibleEntities.has(entity.id)) continue;
-    const g = selectable(svg, entity.id, selected, pick);
+    const g = selectable(svg, entity.id, selected, pick, "", revealIds.has(entity.id));
     g.setAttribute("aria-label", entity.name);
     const region = ["SUBSTRATE", "NWELL", "FIELD"].includes(entity.layer);
     for (const [x, y, width, height] of entity.rects) {
@@ -77,13 +77,13 @@ function pins(svg, s, layers = null, visibleEntities = null) {
   }
 }
 
-function sticks(svg, data, selected, layers, visibleEntities, pick) {
+function sticks(svg, data, selected, layers, visibleEntities, pick, revealIds) {
   const s = data.teaching;
   const selectedStickGroups = [];
   for (const id of ["substrate", "field", "nwell"]) {
     const entity = activeEntities.get(id);
     if (!entity || !layers.has(entity.layer) || !visibleEntities.has(id)) continue;
-    const group = selectable(svg, id, selected, pick, "stick-part");
+    const group = selectable(svg, id, selected, pick, "stick-part", revealIds.has(id));
     if (selected.has(id)) selectedStickGroups.push(group);
     for (const [x,y,width,height] of entity.rects) {
       node(group, "rect", { x, y, width, height, fill: "none", stroke: id === "nwell" ? entity.color : "none",
@@ -93,7 +93,7 @@ function sticks(svg, data, selected, layers, visibleEntities, pick) {
   for (const active of [...s.active, ...s.taps]) {
     if (!layers.has(active.layer) || !visibleEntities.has(active.id)) continue;
     const [x,y,w,h] = active.rect;
-    const g = selectable(svg, active.id, selected, pick, "stick-part");
+    const g = selectable(svg, active.id, selected, pick, "stick-part", revealIds.has(active.id));
     if (selected.has(active.id)) selectedStickGroups.push(g);
     line(g, [[x,y+h/2],[x+w,y+h/2]], s.layers[active.layer].color, s.render.stickStroke);
     text(svg, x, y-3, active.id.toUpperCase(), { "font-size":11 });
@@ -101,20 +101,20 @@ function sticks(svg, data, selected, layers, visibleEntities, pick) {
   // 棍图沿用与版图相同的多晶硅分段，器件栅和输入连接段不再互相覆盖。
   if (layers.has("POLY")) for (const entity of data.entities.filter(e => e.layer === "POLY")) {
     if (!visibleEntities.has(entity.id)) continue;
-    const group = selectable(svg, entity.id, selected, pick, "stick-part");
+    const group = selectable(svg, entity.id, selected, pick, "stick-part", revealIds.has(entity.id));
     if (selected.has(entity.id)) selectedStickGroups.push(group);
     for (const [x,y,width,height] of entity.rects) {
       line(group, [[x+width/2,y],[x+width/2,y+height]], entity.color, s.render.stickStroke);
     }
   }
   if (layers.has("M1")) for (const entity of data.entities.filter(e => e.paths && visibleEntities.has(e.id))) {
-    const g = selectable(svg, entity.id, selected, pick, "stick-part");
+    const g = selectable(svg, entity.id, selected, pick, "stick-part", revealIds.has(entity.id));
     if (selected.has(entity.id)) selectedStickGroups.push(g);
     for (const path of entity.paths) line(g, path, entity.color, s.render.stickStroke);
   }
   if (layers.has("CONTACT")) for (const [net, points] of Object.entries(s.contacts)) {
     if (!visibleEntities.has(`contact-${net}`)) continue;
-    const g = selectable(svg, `contact-${net}`, selected, pick, "stick-part");
+    const g = selectable(svg, `contact-${net}`, selected, pick, "stick-part", revealIds.has(`contact-${net}`));
     if (selected.has(`contact-${net}`)) selectedStickGroups.push(g);
     for (const [x,y] of points) node(g,"rect",{x:x-3.5,y:y-3.5,width:7,height:7,fill:s.layers.CONTACT.color});
   }
@@ -198,7 +198,7 @@ function standardCircuit(svg,data,selected,pick) {
   }
 }
 
-export function renderTeachingViews(data, selected, layers, visibleEntities, pick) {
+export function renderTeachingViews(data, selected, layers, visibleEntities, pick, revealIds = new Set()) {
   activeEntities = new Map((data.entities ?? []).map(entity => [entity.id, entity]));
   const ids=["layout-view","stick-view","positional-view","circuit-view"];
   for(const id of ids) {
@@ -212,8 +212,8 @@ export function renderTeachingViews(data, selected, layers, visibleEntities, pic
   document.getElementById("logic-kind").textContent = data.teaching?.kind === "NAND2" ? "与非门" : "非门";
   renderLogicFormula(document.getElementById("logic-formula"), data.teaching?.formula ?? "等待案例数据");
   if(!data.teaching) return;
-  layout(document.getElementById(ids[0]),data,selected,layers,visibleEntities,pick);
-  sticks(document.getElementById(ids[1]),data,selected,layers,visibleEntities,pick);
+  layout(document.getElementById(ids[0]),data,selected,layers,visibleEntities,pick,revealIds);
+  sticks(document.getElementById(ids[1]),data,selected,layers,visibleEntities,pick,revealIds);
   positionalCircuit(document.getElementById(ids[2]),data,selected,pick);
   standardCircuit(document.getElementById(ids[3]),data,selected,pick);
 }
